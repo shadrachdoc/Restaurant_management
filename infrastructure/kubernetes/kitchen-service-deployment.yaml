@@ -29,9 +29,6 @@ spec:
             name: restaurant-config
         - secretRef:
             name: restaurant-secrets
-        env:
-        - name: DATABASE_URL
-          value: "postgresql+asyncpg://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres-service:5432/$(POSTGRES_DB)"
         resources:
           requests:
             memory: "256Mi"

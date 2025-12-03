@@ -75,6 +75,11 @@ spec:
             secretKeyRef:
               name: restaurant-secrets
               key: JWT_SECRET_KEY
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: SESSION_SECRET
         - name: JWT_ALGORITHM
           valueFrom:
             configMapKeyRef:
