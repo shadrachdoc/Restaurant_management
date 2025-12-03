@@ -1,0 +1,187 @@
+"""
+User management routes
+"""
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from typing import List
+from uuid import UUID
+from ..database import get_db
+from ..models import User
+from ..schemas import UserResponse, UserUpdate, MessageResponse
+from ..security import get_current_user_id, require_role
+from shared.models.enums import UserRole
+from shared.utils.logger import setup_logger
+
+router = APIRouter()
+logger = setup_logger("user-routes")
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_current_user(
+    db: AsyncSession = Depends(get_db),
+    current_user_id: UUID = Depends(get_current_user_id)
+):
+    """
+    Get current user profile
+    """
+    result = await db.execute(
+        select(User).where(User.id == current_user_id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    return user
+
+
+@router.put("/me", response_model=UserResponse)
+async def update_current_user(
+    user_data: UserUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user_id: UUID = Depends(get_current_user_id)
+):
+    """
+    Update current user profile
+    """
+    result = await db.execute(
+        select(User).where(User.id == current_user_id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # Update fields
+    if user_data.full_name is not None:
+        user.full_name = user_data.full_name
+    if user_data.phone is not None:
+        user.phone = user_data.phone
+    if user_data.email is not None:
+        # Check if email is already taken
+        email_check = await db.execute(
+            select(User).where(User.email == user_data.email, User.id != current_user_id)
+        )
+        if email_check.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already in use"
+            )
+        user.email = user_data.email
+
+    await db.commit()
+    await db.refresh(user)
+
+    logger.info(f"User updated: {user.username}")
+
+    return user
+
+
+@router.get("/{user_id}", response_model=UserResponse)
+async def get_user_by_id(
+    user_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(require_role(UserRole.MASTER_ADMIN, UserRole.RESTAURANT_ADMIN))
+):
+    """
+    Get user by ID (Admin only)
+    """
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    return user
+
+
+@router.get("/", response_model=List[UserResponse])
+async def list_users(
+    skip: int = 0,
+    limit: int = 100,
+    role: UserRole = None,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(require_role(UserRole.MASTER_ADMIN))
+):
+    """
+    List all users (Master Admin only)
+    """
+    query = select(User)
+
+    if role:
+        query = query.where(User.role == role)
+
+    query = query.offset(skip).limit(limit)
+    result = await db.execute(query)
+    users = result.scalars().all()
+
+    return users
+
+
+@router.delete("/{user_id}", response_model=MessageResponse)
+async def delete_user(
+    user_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(require_role(UserRole.MASTER_ADMIN))
+):
+    """
+    Delete user (Master Admin only)
+    """
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    await db.delete(user)
+    await db.commit()
+
+    logger.info(f"User deleted: {user.username} (ID: {user_id})")
+
+    return MessageResponse(message="User deleted successfully")
+
+
+@router.patch("/{user_id}/toggle-status", response_model=UserResponse)
+async def toggle_user_status(
+    user_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(require_role(UserRole.MASTER_ADMIN, UserRole.RESTAURANT_ADMIN))
+):
+    """
+    Toggle user active status (Admin only)
+    """
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    user.is_active = not user.is_active
+    await db.commit()
+    await db.refresh(user)
+
+    logger.info(f"User status toggled: {user.username} -> {'active' if user.is_active else 'inactive'}")
+
+    return user
