@@ -73,6 +73,7 @@ export const authAPI = {
 export const restaurantAPI = {
   list: (params) => api.get('/api/v1/restaurants', { params }),
   get: (id) => api.get(`/api/v1/restaurants/${id}`),
+  getById: (id) => api.get(`/api/v1/restaurants/${id}`), // Alias for get
   create: (data) => api.post('/api/v1/restaurants', data),
   update: (id, data) => api.put(`/api/v1/restaurants/${id}`, data),
   delete: (id) => api.delete(`/api/v1/restaurants/${id}`),
