@@ -18,10 +18,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY shared/ /app/shared/
 
 # Copy service code
-COPY services/auth-service/app /app/app
+COPY services/order-service/app /app/app
 
 # Expose port
-EXPOSE 8001
+EXPOSE 8004
 
 # Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8004"]
