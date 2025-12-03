@@ -48,7 +48,6 @@ email-validator==2.1.0.post1
 pytest==7.4.4
 pytest-asyncio==0.23.3
 pytest-cov==4.1.0
-httpx==0.26.0
 faker==22.0.0
 
 # Development
@@ -56,9 +55,6 @@ black==23.12.1
 flake8==7.0.0
 mypy==1.8.0
 isort==5.13.2
-
-# API Documentation
-python-markdown==3.5.1
 
 # Date & Time
 python-dateutil==2.8.2
@@ -69,6 +65,3 @@ aiofiles==23.2.1
 
 # Validation
 phonenumbers==8.13.27
-
-# CORS
-fastapi-cors==0.0.6

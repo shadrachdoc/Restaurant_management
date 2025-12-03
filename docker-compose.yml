@@ -1,0 +1,225 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: restaurant-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-restaurant_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-restaurant_pass_2024}
+      POSTGRES_DB: ${POSTGRES_DB:-restaurant_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - restaurant-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U restaurant_admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: restaurant-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - restaurant-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: restaurant-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - restaurant-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Auth Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    container_name: restaurant-auth-service
+    environment:
+      - DATABASE_URL=postgresql://restaurant_admin:restaurant_pass_2024@postgres:5432/restaurant_db
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key}
+      - SESSION_SECRET=${SESSION_SECRET:-your-session-secret}
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - restaurant-network
+    volumes:
+      - ./services/auth-service:/app
+      - ./shared:/app/shared
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+
+  # Restaurant Service
+  restaurant-service:
+    build:
+      context: .
+      dockerfile: services/restaurant-service/Dockerfile
+    container_name: restaurant-restaurant-service
+    environment:
+      - DATABASE_URL=postgresql://restaurant_admin:restaurant_pass_2024@postgres:5432/restaurant_db
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key}
+    ports:
+      - "8003:8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - restaurant-network
+    volumes:
+      - ./services/restaurant-service:/app
+      - ./shared:/app/shared
+      - ./uploads:/uploads
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
+
+  # Order Service
+  order-service:
+    build:
+      context: .
+      dockerfile: services/order-service/Dockerfile
+    container_name: restaurant-order-service
+    environment:
+      - DATABASE_URL=postgresql://restaurant_admin:restaurant_pass_2024@postgres:5432/restaurant_db
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key}
+    ports:
+      - "8004:8004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - restaurant-network
+    volumes:
+      - ./services/order-service:/app
+      - ./shared:/app/shared
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8004 --reload
+
+  # Kitchen Service
+  kitchen-service:
+    build:
+      context: .
+      dockerfile: services/kitchen-service/Dockerfile
+    container_name: restaurant-kitchen-service
+    environment:
+      - DATABASE_URL=postgresql://restaurant_admin:restaurant_pass_2024@postgres:5432/restaurant_db
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key}
+    ports:
+      - "8005:8005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - restaurant-network
+    volumes:
+      - ./services/kitchen-service:/app
+      - ./shared:/app/shared
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8005 --reload
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: restaurant-api-gateway
+    environment:
+      - REDIS_HOST=redis
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - RESTAURANT_SERVICE_URL=http://restaurant-service:8003
+      - ORDER_SERVICE_URL=http://order-service:8004
+      - KITCHEN_SERVICE_URL=http://kitchen-service:8005
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - auth-service
+      - restaurant-service
+      - order-service
+      - kitchen-service
+    networks:
+      - restaurant-network
+    volumes:
+      - ./services/api-gateway:/app
+      - ./shared:/app/shared
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend/restaurant-app
+      dockerfile: Dockerfile
+    container_name: restaurant-frontend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+    networks:
+      - restaurant-network
+    volumes:
+      - ./frontend/restaurant-app:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0 --port 3000
+
+networks:
+  restaurant-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
