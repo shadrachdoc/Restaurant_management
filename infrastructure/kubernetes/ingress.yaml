@@ -1,0 +1,102 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: restaurant-ingress
+  namespace: restaurant-system
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  # Frontend
+  - host: restaurant.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 3000
+
+  # API Gateway
+  - host: api.restaurant.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8000
+
+  # Direct service access (for debugging)
+  - host: auth.restaurant.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 8001
+
+  - host: restaurant-api.restaurant.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: restaurant-service
+            port:
+              number: 8003
+
+  - host: order.restaurant.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: order-service
+            port:
+              number: 8004
+
+  - host: kitchen.restaurant.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kitchen-service
+            port:
+              number: 8005
+
+  - host: rabbitmq.restaurant.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: rabbitmq-service
+            port:
+              number: 15672
+---
+# Note: Add these to your /etc/hosts file for local development:
+# 127.0.0.1 restaurant.local
+# 127.0.0.1 api.restaurant.local
+# 127.0.0.1 auth.restaurant.local
+# 127.0.0.1 restaurant-api.restaurant.local
+# 127.0.0.1 order.restaurant.local
+# 127.0.0.1 kitchen.restaurant.local
+# 127.0.0.1 rabbitmq.restaurant.local
