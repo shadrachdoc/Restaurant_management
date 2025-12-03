@@ -43,14 +43,14 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS"
     )
 
-    # Service Ports
-    auth_service_port: int = Field(default=8001, alias="AUTH_SERVICE_PORT")
-    master_admin_service_port: int = Field(default=8002, alias="MASTER_ADMIN_SERVICE_PORT")
-    restaurant_service_port: int = Field(default=8003, alias="RESTAURANT_SERVICE_PORT")
-    order_service_port: int = Field(default=8004, alias="ORDER_SERVICE_PORT")
-    kitchen_service_port: int = Field(default=8005, alias="KITCHEN_SERVICE_PORT")
-    notification_service_port: int = Field(default=8006, alias="NOTIFICATION_SERVICE_PORT")
-    api_gateway_port: int = Field(default=8000, alias="API_GATEWAY_PORT")
+    # Service Ports (using APP_ prefix to avoid K8s auto-injected env vars)
+    auth_service_port: int = Field(default=8001, alias="APP_AUTH_SERVICE_PORT")
+    master_admin_service_port: int = Field(default=8002, alias="APP_MASTER_ADMIN_SERVICE_PORT")
+    restaurant_service_port: int = Field(default=8003, alias="APP_RESTAURANT_SERVICE_PORT")
+    order_service_port: int = Field(default=8004, alias="APP_ORDER_SERVICE_PORT")
+    kitchen_service_port: int = Field(default=8005, alias="APP_KITCHEN_SERVICE_PORT")
+    notification_service_port: int = Field(default=8006, alias="APP_NOTIFICATION_SERVICE_PORT")
+    api_gateway_port: int = Field(default=8000, alias="APP_API_GATEWAY_PORT")
 
     # New Relic
     new_relic_license_key: str = Field(default="", alias="NEW_RELIC_LICENSE_KEY")

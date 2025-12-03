@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: restaurant-service
-        image: restaurant-restaurant-service:latest
+        image: restaurant_management_restaurant-service:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8003

@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: kitchen-service
-        image: restaurant-kitchen-service:latest
+        image: restaurant_management_kitchen-service:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8005

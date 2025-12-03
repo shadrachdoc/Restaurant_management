@@ -19,14 +19,12 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: restaurant-auth-service:latest
+        image: restaurant_management_auth-service:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8001
           name: http
         env:
-        - name: DATABASE_URL
-          value: "postgresql+asyncpg://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres-service:5432/$(POSTGRES_DB)"
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
@@ -42,6 +40,11 @@ spec:
             configMapKeyRef:
               name: restaurant-config
               key: POSTGRES_DB
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: DATABASE_URL
         - name: REDIS_HOST
           valueFrom:
             configMapKeyRef:
