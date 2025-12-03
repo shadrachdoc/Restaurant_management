@@ -7,7 +7,7 @@ import LoginPage from './pages/Auth/LoginPage';
 import SignupPage from './pages/Auth/SignupPage';
 
 // Customer Pages
-import CustomerHome from './pages/Customer/CustomerHome';
+import QRScanLanding from './pages/Customer/QRScanLanding';
 import MenuView from './pages/Customer/MenuView';
 import OrderTracking from './pages/Customer/OrderTracking';
 
@@ -44,7 +44,7 @@ function App() {
 
   // Redirect authenticated users to appropriate dashboard
   const getDefaultRoute = () => {
-    if (!isAuthenticated) return '/customer';
+    if (!isAuthenticated) return '/login';
 
     switch (user?.role) {
       case 'master_admin':
@@ -55,7 +55,7 @@ function App() {
         return '/kitchen';
       case 'customer':
       default:
-        return '/customer';
+        return '/customer/orders';
     }
   };
 
@@ -91,9 +91,10 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
 
-        {/* Customer Routes */}
-        <Route path="/customer" element={<CustomerHome />} />
+        {/* Customer Routes - QR Code Flow */}
+        <Route path="/table/:tableId" element={<QRScanLanding />} />
         <Route path="/menu/:restaurantId" element={<MenuView />} />
+        <Route path="/customer/orders" element={<OrderTracking />} />
         <Route path="/order/:orderId" element={<OrderTracking />} />
 
         {/* Restaurant Admin Routes */}

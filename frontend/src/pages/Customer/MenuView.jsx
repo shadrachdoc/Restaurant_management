@@ -11,8 +11,14 @@ export default function MenuView() {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [tableInfo, setTableInfo] = useState(null);
 
   useEffect(() => {
+    // Load table info from session (set by QR scan)
+    const savedTableInfo = sessionStorage.getItem('currentTable');
+    if (savedTableInfo) {
+      setTableInfo(JSON.parse(savedTableInfo));
+    }
     fetchData();
   }, [restaurantId]);
 
@@ -74,6 +80,25 @@ export default function MenuView() {
       {/* Restaurant Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* Table Info Banner (if scanned from QR) */}
+          {tableInfo && (
+            <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-lg mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🍽️</span>
+                <div>
+                  <p className="font-bold text-lg">Table {tableInfo.tableNumber}</p>
+                  <p className="text-sm opacity-90">Dining in • Order will be delivered to your table</p>
+                </div>
+              </div>
+              <button
+                onClick={() => sessionStorage.removeItem('currentTable')}
+                className="text-white hover:bg-white hover:bg-opacity-20 px-3 py-1 rounded text-sm"
+              >
+                Change
+              </button>
+            </div>
+          )}
+
           <h1 className="text-3xl font-bold text-gray-900">{restaurant?.name}</h1>
           <p className="text-gray-600 mt-2">{restaurant?.description}</p>
           <div className="flex gap-4 mt-4">

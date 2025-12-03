@@ -95,6 +95,7 @@ export const menuAPI = {
 export const tableAPI = {
   list: (restaurantId, params) => api.get(`/api/v1/restaurants/${restaurantId}/tables`, { params }),
   get: (restaurantId, tableId) => api.get(`/api/v1/restaurants/${restaurantId}/tables/${tableId}`),
+  getById: (restaurantId, tableId) => api.get(`/api/v1/restaurants/${restaurantId}/tables/${tableId}`), // Alias for get
   create: (restaurantId, data) => api.post(`/api/v1/restaurants/${restaurantId}/tables`, data),
   update: (restaurantId, tableId, data) => api.put(`/api/v1/restaurants/${restaurantId}/tables/${tableId}`, data),
   delete: (restaurantId, tableId) => api.delete(`/api/v1/restaurants/${restaurantId}/tables/${tableId}`),
