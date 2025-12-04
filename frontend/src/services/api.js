@@ -89,6 +89,15 @@ export const authAPI = {
   updateRestaurantId: (restaurantId) => authApi.patch(`/api/v1/users/me/restaurant?restaurant_id=${restaurantId}`),
 };
 
+// Staff API - uses Auth Service
+export const staffAPI = {
+  listStaff: (restaurantId, role) => authApi.get(`/api/v1/users/staff/${restaurantId}`, { params: { role } }),
+  createChef: (data) => authApi.post('/api/v1/users/chef', data),
+  createCustomer: (data) => authApi.post('/api/v1/users/customer', data),
+  deleteChef: (chefId) => authApi.delete(`/api/v1/users/chef/${chefId}`),
+  deleteCustomer: (customerId) => authApi.delete(`/api/v1/users/customer/${customerId}`),
+};
+
 // Restaurant API - uses Restaurant Service
 export const restaurantAPI = {
   list: (params) => restaurantApi.get('/api/v1/restaurants', { params }),

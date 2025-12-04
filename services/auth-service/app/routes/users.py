@@ -323,3 +323,119 @@ async def delete_chef(
     logger.info(f"Chef deleted: {chef.username} (ID: {chef_id})")
 
     return MessageResponse(message="Chef account deleted successfully")
+
+
+@router.get("/staff/{restaurant_id}", response_model=List[UserResponse])
+async def list_restaurant_staff(
+    restaurant_id: UUID,
+    role: str = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.RESTAURANT_ADMIN, UserRole.MASTER_ADMIN))
+):
+    """
+    List all staff for a specific restaurant (chefs and customers)
+    Optional role filter: 'chef' or 'customer'
+    """
+    query = select(User).where(User.restaurant_id == restaurant_id)
+
+    if role:
+        if role.lower() == 'chef':
+            query = query.where(User.role == UserRole.CHEF)
+        elif role.lower() == 'customer':
+            query = query.where(User.role == UserRole.CUSTOMER)
+    else:
+        # Get both chefs and customers
+        query = query.where(User.role.in_([UserRole.CHEF, UserRole.CUSTOMER]))
+
+    query = query.order_by(User.created_at.desc())
+    result = await db.execute(query)
+    staff = result.scalars().all()
+
+    return staff
+
+
+@router.post("/customer", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_customer(
+    customer_data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.RESTAURANT_ADMIN))
+):
+    """
+    Create a new customer account (Restaurant Admin only)
+    """
+    from ..security import get_password_hash
+
+    # Check if username already exists
+    username_check = await db.execute(
+        select(User).where(User.username == customer_data.get('username'))
+    )
+    if username_check.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already exists"
+        )
+
+    # Check if email already exists
+    if customer_data.get('email'):
+        email_check = await db.execute(
+            select(User).where(User.email == customer_data.get('email'))
+        )
+        if email_check.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already in use"
+            )
+
+    # Create customer user
+    new_customer = User(
+        username=customer_data['username'],
+        email=customer_data.get('email'),
+        full_name=customer_data.get('full_name'),
+        password_hash=get_password_hash(customer_data['password']),
+        role=UserRole.CUSTOMER,
+        restaurant_id=customer_data.get('restaurant_id'),
+        is_active=True
+    )
+
+    db.add(new_customer)
+    await db.commit()
+    await db.refresh(new_customer)
+
+    logger.info(f"Customer created: {new_customer.username} for restaurant {customer_data.get('restaurant_id')}")
+
+    return new_customer
+
+
+@router.delete("/customer/{customer_id}", response_model=MessageResponse)
+async def delete_customer(
+    customer_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.RESTAURANT_ADMIN))
+):
+    """
+    Delete a customer account (Restaurant Admin only)
+    """
+    result = await db.execute(
+        select(User).where(User.id == customer_id, User.role == UserRole.CUSTOMER)
+    )
+    customer = result.scalar_one_or_none()
+
+    if not customer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer not found"
+        )
+
+    # Verify the customer belongs to the current user's restaurant
+    if customer.restaurant_id != current_user.get('restaurant_id'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only delete customers from your own restaurant"
+        )
+
+    await db.delete(customer)
+    await db.commit()
+
+    logger.info(f"Customer deleted: {customer.username} (ID: {customer_id})")
+
+    return MessageResponse(message="Customer account deleted successfully")

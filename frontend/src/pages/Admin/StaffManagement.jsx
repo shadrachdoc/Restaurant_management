@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { FiPlus, FiTrash2, FiUsers } from 'react-icons/fi';
 import DashboardLayout from '../../components/layout/DashboardLayout';
-import { authAPI } from '../../services/api';
+import { staffAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 
 export default function StaffManagement() {
   const { user } = useAuthStore();
-  const [chefs, setChefs] = useState([]);
+  const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'chef', 'customer'
+  const [staffType, setStaffType] = useState('chef'); // Type to create
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -19,18 +21,18 @@ export default function StaffManagement() {
 
   useEffect(() => {
     if (user?.restaurant_id) {
-      fetchChefs();
+      fetchStaff();
     } else {
       setLoading(false);
     }
   }, [user]);
 
-  const fetchChefs = async () => {
+  const fetchStaff = async () => {
     try {
-      const response = await authAPI.get(`/api/v1/users/chefs/${user.restaurant_id}`);
-      setChefs(response.data);
+      const response = await staffAPI.listStaff(user.restaurant_id, null);
+      setStaff(response.data);
     } catch (error) {
-      console.error('Failed to fetch chefs:', error);
+      console.error('Failed to fetch staff:', error);
       toast.error('Failed to load staff');
     } finally {
       setLoading(false);
@@ -40,30 +42,41 @@ export default function StaffManagement() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await authAPI.post('/api/v1/users/chef', {
+      const data = {
         ...formData,
-        role: 'chef',
         restaurant_id: user.restaurant_id,
-      });
-      toast.success('Chef account created successfully!');
+      };
+
+      if (staffType === 'chef') {
+        await staffAPI.createChef(data);
+        toast.success('Chef account created successfully!');
+      } else {
+        await staffAPI.createCustomer(data);
+        toast.success('Customer account created successfully!');
+      }
+
       setShowModal(false);
       resetForm();
-      fetchChefs();
+      fetchStaff();
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Failed to create chef account';
+      const errorMsg = error.response?.data?.detail || `Failed to create ${staffType} account`;
       toast.error(errorMsg);
     }
   };
 
-  const handleDelete = async (chefId) => {
-    if (!confirm('Are you sure you want to delete this chef account?')) return;
+  const handleDelete = async (staffMember) => {
+    if (!confirm(`Are you sure you want to delete ${staffMember.full_name || staffMember.username}?`)) return;
 
     try {
-      await authAPI.delete(`/api/v1/users/chef/${chefId}`);
-      toast.success('Chef account deleted');
-      fetchChefs();
+      if (staffMember.role === 'CHEF') {
+        await staffAPI.deleteChef(staffMember.id);
+      } else {
+        await staffAPI.deleteCustomer(staffMember.id);
+      }
+      toast.success('Account deleted');
+      fetchStaff();
     } catch (error) {
-      toast.error('Failed to delete chef account');
+      toast.error('Failed to delete account');
     }
   };
 
@@ -75,6 +88,13 @@ export default function StaffManagement() {
       full_name: '',
     });
   };
+
+  const filteredStaff = staff.filter(member => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'chef') return member.role === 'CHEF';
+    if (activeTab === 'customer') return member.role === 'CUSTOMER';
+    return true;
+  });
 
   if (!user?.restaurant_id) {
     return (
@@ -97,13 +117,47 @@ export default function StaffManagement() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Staff Management</h1>
-            <p className="text-gray-600 mt-1">Manage your chef accounts</p>
+            <p className="text-gray-600 mt-1">Manage your chefs and customer accounts</p>
           </div>
           <button
             onClick={() => setShowModal(true)}
             className="btn-primary flex items-center gap-2"
           >
-            <FiPlus /> Add Chef
+            <FiPlus /> Add Staff
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-4 mb-6">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'all'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            All ({staff.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('chef')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'chef'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Chefs ({staff.filter(s => s.role === 'CHEF').length})
+          </button>
+          <button
+            onClick={() => setActiveTab('customer')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'customer'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Customers ({staff.filter(s => s.role === 'CUSTOMER').length})
           </button>
         </div>
 
@@ -111,10 +165,12 @@ export default function StaffManagement() {
           <div className="flex justify-center py-20">
             <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full"></div>
           </div>
-        ) : chefs.length === 0 ? (
+        ) : filteredStaff.length === 0 ? (
           <div className="text-center py-20">
             <FiUsers className="mx-auto text-6xl text-gray-300 mb-4" />
-            <p className="text-gray-500 text-lg">No chefs yet. Add your first chef!</p>
+            <p className="text-gray-500 text-lg">
+              {activeTab === 'all' ? 'No staff yet. Add your first staff member!' : `No ${activeTab}s yet.`}
+            </p>
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-md overflow-hidden">
@@ -131,6 +187,9 @@ export default function StaffManagement() {
                     Email
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Role
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -139,31 +198,42 @@ export default function StaffManagement() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {chefs.map((chef) => (
-                  <tr key={chef.id} className="hover:bg-gray-50">
+                {filteredStaff.map((member) => (
+                  <tr key={member.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{chef.full_name}</div>
+                      <div className="text-sm font-medium text-gray-900">{member.full_name || '-'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{chef.username}</div>
+                      <div className="text-sm text-gray-500">{member.username}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{chef.email}</div>
+                      <div className="text-sm text-gray-500">{member.email || '-'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          chef.is_active
+                          member.role === 'CHEF'
+                            ? 'bg-purple-100 text-purple-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}
+                      >
+                        {member.role === 'CHEF' ? 'Chef' : 'Customer'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          member.is_active
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
                         }`}
                       >
-                        {chef.is_active ? 'Active' : 'Inactive'}
+                        {member.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
-                        onClick={() => handleDelete(chef.id)}
+                        onClick={() => handleDelete(member)}
                         className="text-red-600 hover:text-red-900 flex items-center gap-1"
                       >
                         <FiTrash2 /> Delete
@@ -176,13 +246,42 @@ export default function StaffManagement() {
           </div>
         )}
 
-        {/* Add Chef Modal */}
+        {/* Add Staff Modal */}
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl max-w-md w-full p-8">
-              <h2 className="text-2xl font-bold mb-6">Add New Chef</h2>
+              <h2 className="text-2xl font-bold mb-6">Add New Staff Member</h2>
 
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Staff Type Selection */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Staff Type</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="staffType"
+                        value="chef"
+                        checked={staffType === 'chef'}
+                        onChange={(e) => setStaffType(e.target.value)}
+                        className="mr-2"
+                      />
+                      <span>Chef</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="staffType"
+                        value="customer"
+                        checked={staffType === 'customer'}
+                        onChange={(e) => setStaffType(e.target.value)}
+                        className="mr-2"
+                      />
+                      <span>Customer</span>
+                    </label>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium mb-1">Full Name</label>
                   <input
@@ -231,7 +330,7 @@ export default function StaffManagement() {
 
                 <div className="flex gap-4 pt-4">
                   <button type="submit" className="btn-primary flex-1">
-                    Create Chef
+                    Create {staffType === 'chef' ? 'Chef' : 'Customer'}
                   </button>
                   <button
                     type="button"
