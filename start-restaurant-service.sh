@@ -22,7 +22,7 @@ export SESSION_SECRET="your-super-secret-session-key-min-32-characters-long"
 
 # Service configuration
 export APP_RESTAURANT_SERVICE_PORT=8003
-export QR_CODE_BASE_URL="http://localhost:3001"
+export QR_CODE_BASE_URL="http://192.168.86.142:5173/menu"
 export ENVIRONMENT="development"
 
 export PYTHONPATH="/home/shadrach/Restaurant_management:${PYTHONPATH}"
