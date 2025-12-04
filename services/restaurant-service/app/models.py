@@ -107,7 +107,7 @@ class Table(Base):
     status = Column(SQLEnum(TableStatus), default=TableStatus.AVAILABLE, nullable=False, index=True)
 
     # QR Code
-    qr_code_url = Column(String(500), nullable=True)
+    qr_code_url = Column(Text, nullable=True)  # Base64 data URL can be very long
     qr_code_data = Column(Text, nullable=True)  # Unique identifier for table
 
     # Location (optional)
