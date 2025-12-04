@@ -185,3 +185,112 @@ async def toggle_user_status(
     logger.info(f"User status toggled: {user.username} -> {'active' if user.is_active else 'inactive'}")
 
     return user
+
+
+# Chef Management Endpoints (for Restaurant Admin)
+
+@router.post("/chef", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_chef(
+    chef_data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.RESTAURANT_ADMIN))
+):
+    """
+    Create a new chef account (Restaurant Admin only)
+    """
+    from ..security import get_password_hash
+
+    # Check if username already exists
+    username_check = await db.execute(
+        select(User).where(User.username == chef_data.get('username'))
+    )
+    if username_check.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already exists"
+        )
+
+    # Check if email already exists
+    if chef_data.get('email'):
+        email_check = await db.execute(
+            select(User).where(User.email == chef_data.get('email'))
+        )
+        if email_check.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already in use"
+            )
+
+    # Create chef user
+    new_chef = User(
+        username=chef_data['username'],
+        email=chef_data.get('email'),
+        full_name=chef_data.get('full_name'),
+        password_hash=get_password_hash(chef_data['password']),
+        role=UserRole.CHEF,
+        restaurant_id=chef_data.get('restaurant_id'),
+        is_active=True
+    )
+
+    db.add(new_chef)
+    await db.commit()
+    await db.refresh(new_chef)
+
+    logger.info(f"Chef created: {new_chef.username} for restaurant {chef_data.get('restaurant_id')}")
+
+    return new_chef
+
+
+@router.get("/chefs/{restaurant_id}", response_model=List[UserResponse])
+async def list_chefs_by_restaurant(
+    restaurant_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.RESTAURANT_ADMIN, UserRole.MASTER_ADMIN))
+):
+    """
+    List all chefs for a specific restaurant (Restaurant Admin/Master Admin only)
+    """
+    result = await db.execute(
+        select(User).where(
+            User.restaurant_id == restaurant_id,
+            User.role == UserRole.CHEF
+        ).order_by(User.created_at.desc())
+    )
+    chefs = result.scalars().all()
+
+    return chefs
+
+
+@router.delete("/chef/{chef_id}", response_model=MessageResponse)
+async def delete_chef(
+    chef_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.RESTAURANT_ADMIN))
+):
+    """
+    Delete a chef account (Restaurant Admin only)
+    """
+    result = await db.execute(
+        select(User).where(User.id == chef_id, User.role == UserRole.CHEF)
+    )
+    chef = result.scalar_one_or_none()
+
+    if not chef:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chef not found"
+        )
+
+    # Verify the chef belongs to the current user's restaurant
+    if chef.restaurant_id != current_user.get('restaurant_id'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only delete chefs from your own restaurant"
+        )
+
+    await db.delete(chef)
+    await db.commit()
+
+    logger.info(f"Chef deleted: {chef.username} (ID: {chef_id})")
+
+    return MessageResponse(message="Chef account deleted successfully")
