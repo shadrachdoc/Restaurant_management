@@ -87,9 +87,10 @@ export default function MenuManagement() {
       name: '',
       description: '',
       price: '',
-      category: '',
+      category: 'main_course',
       is_vegetarian: false,
       is_vegan: false,
+      is_gluten_free: false,
       preparation_time: '',
     });
   };
@@ -241,13 +242,19 @@ export default function MenuManagement() {
 
                   <div>
                     <label className="block text-sm font-medium mb-1">Category</label>
-                    <input
-                      type="text"
+                    <select
                       className="input-field"
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                       required
-                    />
+                    >
+                      <option value="appetizer">Appetizer</option>
+                      <option value="main_course">Main Course</option>
+                      <option value="dessert">Dessert</option>
+                      <option value="beverage">Beverage</option>
+                      <option value="side_dish">Side Dish</option>
+                      <option value="special">Special</option>
+                    </select>
                   </div>
 
                   <div>
@@ -260,25 +267,36 @@ export default function MenuManagement() {
                     />
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.is_vegetarian}
-                        onChange={(e) => setFormData({ ...formData, is_vegetarian: e.target.checked })}
-                        className="w-4 h-4"
-                      />
-                      🌱 Vegetarian
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.is_vegan}
-                        onChange={(e) => setFormData({ ...formData, is_vegan: e.target.checked })}
-                        className="w-4 h-4"
-                      />
-                      🥬 Vegan
-                    </label>
+                  <div className="col-span-2">
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={formData.is_vegetarian}
+                          onChange={(e) => setFormData({ ...formData, is_vegetarian: e.target.checked })}
+                          className="w-4 h-4"
+                        />
+                        🌱 Vegetarian
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={formData.is_vegan}
+                          onChange={(e) => setFormData({ ...formData, is_vegan: e.target.checked })}
+                          className="w-4 h-4"
+                        />
+                        🥬 Vegan
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={formData.is_gluten_free}
+                          onChange={(e) => setFormData({ ...formData, is_gluten_free: e.target.checked })}
+                          className="w-4 h-4"
+                        />
+                        🌾 Gluten-Free
+                      </label>
+                    </div>
                   </div>
                 </div>
 
