@@ -15,9 +15,10 @@ export default function MenuManagement() {
     name: '',
     description: '',
     price: '',
-    category: '',
+    category: 'main_course',
     is_vegetarian: false,
     is_vegan: false,
+    is_gluten_free: false,
     preparation_time: '',
   });
 
