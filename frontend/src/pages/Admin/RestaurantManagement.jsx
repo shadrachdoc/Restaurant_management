@@ -12,13 +12,13 @@ export default function RestaurantManagement() {
   const [creating, setCreating] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    cuisine_type: '',
     description: '',
     address: '',
     phone: '',
     email: '',
+    website: '',
+    theme_color: '#000000',
     max_tables: 20,
-    is_active: true,
   });
 
   useEffect(() => {
@@ -110,13 +110,13 @@ export default function RestaurantManagement() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine Type</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
                     <input
-                      type="text"
+                      type="url"
                       className="input-field"
-                      value={formData.cuisine_type}
-                      onChange={(e) => setFormData({ ...formData, cuisine_type: e.target.value })}
-                      placeholder="Italian, Chinese, etc."
+                      value={formData.website}
+                      onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                      placeholder="https://myrestaurant.com"
                     />
                   </div>
 

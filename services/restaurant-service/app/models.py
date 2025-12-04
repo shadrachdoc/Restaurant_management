@@ -6,10 +6,8 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, Text, 
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 import uuid
-from sqlalchemy.ext.declarative import declarative_base
 from shared.models.enums import MenuItemCategory, TableStatus, SubscriptionStatus, PricingPlan
-
-Base = declarative_base()
+from .database import Base
 
 
 class Restaurant(Base):
