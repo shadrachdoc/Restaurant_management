@@ -86,6 +86,7 @@ export const authAPI = {
   refreshToken: (refreshToken) => authApi.post('/api/v1/auth/refresh', { refresh_token: refreshToken }),
   changePassword: (data) => authApi.post('/api/v1/auth/change-password', data),
   getCurrentUser: () => authApi.get('/api/v1/users/me'),
+  updateRestaurantId: (restaurantId) => authApi.patch(`/api/v1/users/me/restaurant?restaurant_id=${restaurantId}`),
 };
 
 // Restaurant API - uses Restaurant Service

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
-import { restaurantAPI } from '../../services/api';
+import { restaurantAPI, authAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 
@@ -48,10 +48,14 @@ export default function RestaurantManagement() {
     try {
       const response = await restaurantAPI.create(formData);
       const newRestaurant = response.data;
-      toast.success('Restaurant created successfully!');
 
-      // Update user with restaurant_id
+      // Update user's restaurant_id in the database
+      await authAPI.updateRestaurantId(newRestaurant.id);
+
+      // Update user in local state
       updateUser({ restaurant_id: newRestaurant.id });
+
+      toast.success('Restaurant created successfully!');
 
       setCreating(false);
       setRestaurant(newRestaurant);
