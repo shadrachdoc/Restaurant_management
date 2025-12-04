@@ -81,14 +81,14 @@ async def create_table(
     await db.flush()  # Get the ID before generating QR code
 
     # Generate QR code
-    qr_code_url, qr_token = generate_qr_code(
+    qr_code_image, qr_url, qr_token = generate_qr_code(
         new_table.id,
         restaurant_id,
         table_data.table_number
     )
 
-    new_table.qr_code_url = qr_code_url
-    new_table.qr_code_data = qr_token
+    new_table.qr_code_data = qr_code_image  # Base64 image for display
+    new_table.qr_code_url = qr_url  # Actual URL that QR points to
 
     await db.commit()
     await db.refresh(new_table)
@@ -296,14 +296,14 @@ async def regenerate_table_qr_code(
         )
 
     # Regenerate QR code
-    qr_code_url, qr_token = regenerate_qr_code(
+    qr_code_image, qr_url, qr_token = regenerate_qr_code(
         table.id,
         restaurant_id,
         table.table_number
     )
 
-    table.qr_code_url = qr_code_url
-    table.qr_code_data = qr_token
+    table.qr_code_data = qr_code_image  # Base64 image for display
+    table.qr_code_url = qr_url  # Actual URL that QR points to
 
     await db.commit()
     await db.refresh(table)
@@ -313,8 +313,8 @@ async def regenerate_table_qr_code(
     return QRCodeResponse(
         table_id=table.id,
         table_number=table.table_number,
-        qr_code_url=qr_code_url,
-        qr_code_data=qr_token
+        qr_code_url=qr_url,
+        qr_code_data=qr_code_image
     )
 
 
@@ -343,13 +343,13 @@ async def get_table_qr_code(
 
     if not table.qr_code_url:
         # Generate QR code if not exists
-        qr_code_url, qr_token = generate_qr_code(
+        qr_code_image, qr_url, qr_token = generate_qr_code(
             table.id,
             restaurant_id,
             table.table_number
         )
-        table.qr_code_url = qr_code_url
-        table.qr_code_data = qr_token
+        table.qr_code_data = qr_code_image
+        table.qr_code_url = qr_url
         await db.commit()
 
     return QRCodeResponse(

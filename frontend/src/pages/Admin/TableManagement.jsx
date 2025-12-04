@@ -140,7 +140,7 @@ export default function TableManagement() {
                 {/* QR Code Preview */}
                 <div className="bg-gray-50 p-4 rounded-lg mb-4 flex justify-center">
                   {table.qr_code_data ? (
-                    <QRCode value={table.qr_code_data} size={120} />
+                    <img src={table.qr_code_data} alt="QR Code" className="w-[120px] h-[120px]" />
                   ) : (
                     <div className="text-gray-400 text-center">No QR Code</div>
                   )}
@@ -264,12 +264,27 @@ export default function TableManagement() {
               <p className="text-gray-600 mb-6">Scan to view menu and order</p>
 
               <div className="bg-gray-50 p-8 rounded-lg mb-6 inline-block">
-                {showQR.qr_code_data && <QRCode value={showQR.qr_code_data} size={256} />}
+                {showQR.qr_code_data && (
+                  <img
+                    src={showQR.qr_code_data}
+                    alt="QR Code"
+                    className="w-64 h-64"
+                  />
+                )}
               </div>
 
-              <button onClick={() => setShowQR(null)} className="btn-primary w-full">
-                Close
-              </button>
+              <div className="flex gap-4">
+                <a
+                  href={showQR.qr_code_data}
+                  download={`table-${showQR.table_number}-qr.png`}
+                  className="btn-secondary flex-1"
+                >
+                  Download QR
+                </a>
+                <button onClick={() => setShowQR(null)} className="btn-primary flex-1">
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}

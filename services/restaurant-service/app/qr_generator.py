@@ -10,7 +10,7 @@ from shared.config.settings import settings
 import uuid
 
 
-def generate_qr_code(table_id: uuid.UUID, restaurant_id: uuid.UUID, table_number: str) -> Tuple[str, str]:
+def generate_qr_code(table_id: uuid.UUID, restaurant_id: uuid.UUID, table_number: str) -> Tuple[str, str, str]:
     """
     Generate QR code for a table
 
@@ -20,13 +20,17 @@ def generate_qr_code(table_id: uuid.UUID, restaurant_id: uuid.UUID, table_number
         table_number: Table number for display
 
     Returns:
-        Tuple of (qr_code_data_url, qr_code_unique_token)
+        Tuple of (qr_code_image_data_url, qr_url, qr_token)
+        - qr_code_image_data_url: Base64 image data for display
+        - qr_url: The actual URL that the QR code points to
+        - qr_token: Unique security token
     """
     # Create unique token for the table
     qr_token = f"{restaurant_id}:{table_id}:{uuid.uuid4()}"
 
     # Create QR code URL that customers will scan
-    qr_url = f"{settings.qr_code_base_url}/{table_id}?restaurant={restaurant_id}&token={qr_token}"
+    # Format: /menu/{restaurantId}/{tableId}
+    qr_url = f"{settings.qr_code_base_url}/{restaurant_id}/{table_id}"
 
     # Determine error correction level
     error_correction_map = {
@@ -59,13 +63,13 @@ def generate_qr_code(table_id: uuid.UUID, restaurant_id: uuid.UUID, table_number
     img.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
 
-    # Create data URL
-    qr_code_data_url = f"data:image/png;base64,{img_str}"
+    # Create data URL for the image
+    qr_code_image_data_url = f"data:image/png;base64,{img_str}"
 
-    return qr_code_data_url, qr_token
+    return qr_code_image_data_url, qr_url, qr_token
 
 
-def regenerate_qr_code(table_id: uuid.UUID, restaurant_id: uuid.UUID, table_number: str) -> Tuple[str, str]:
+def regenerate_qr_code(table_id: uuid.UUID, restaurant_id: uuid.UUID, table_number: str) -> Tuple[str, str, str]:
     """
     Regenerate QR code for a table (same as generate but for clarity)
 
@@ -75,7 +79,7 @@ def regenerate_qr_code(table_id: uuid.UUID, restaurant_id: uuid.UUID, table_numb
         table_number: Table number for display
 
     Returns:
-        Tuple of (qr_code_data_url, qr_code_unique_token)
+        Tuple of (qr_code_image_data_url, qr_url, qr_token)
     """
     return generate_qr_code(table_id, restaurant_id, table_number)
 

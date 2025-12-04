@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// Service URLs - direct service calls (no API Gateway)
-const AUTH_SERVICE_URL = 'http://localhost:8001';
-const RESTAURANT_SERVICE_URL = 'http://localhost:8003';
+// Service URLs - use Vite proxy (empty baseURL means requests go through proxy)
+const AUTH_SERVICE_URL = '';  // Proxied to localhost:8001
+const RESTAURANT_SERVICE_URL = '';  // Proxied to localhost:8003
 
 // Create axios instance for Auth Service
 const authApi = axios.create({
