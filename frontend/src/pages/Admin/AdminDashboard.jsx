@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { FiUsers, FiDollarSign, FiStar, FiTrendingUp } from 'react-icons/fi';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { restaurantAPI, feedbackAPI } from '../../services/api';
@@ -14,6 +15,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (user?.restaurant_id) {
       fetchDashboardData();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
@@ -27,6 +30,7 @@ export default function AdminDashboard() {
       setFeedback(feedbackRes.data);
     } catch (error) {
       toast.error('Failed to load dashboard data');
+      console.error('Dashboard fetch error:', error);
     } finally {
       setLoading(false);
     }
@@ -58,6 +62,32 @@ export default function AdminDashboard() {
       color: 'bg-purple-500',
     },
   ];
+
+  // Show message if no restaurant
+  if (!loading && !user?.restaurant_id) {
+    return (
+      <DashboardLayout>
+        <div className="p-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-600 mt-1">Welcome back, {user?.full_name || user?.username}!</p>
+          </div>
+
+          <div className="max-w-2xl mx-auto text-center py-20">
+            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Setup Required</h2>
+              <p className="text-gray-600 mb-8">
+                You need to create your restaurant first before you can access the dashboard.
+              </p>
+              <Link to="/admin/restaurant" className="btn-primary inline-block">
+                Create Your Restaurant
+              </Link>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -127,27 +157,27 @@ export default function AdminDashboard() {
             <div className="bg-white rounded-xl shadow-md p-6">
               <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <a
-                  href="/admin/menu"
+                <Link
+                  to="/admin/menu"
                   className="block p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all"
                 >
                   <p className="font-semibold text-gray-900">📋 Manage Menu</p>
                   <p className="text-sm text-gray-600 mt-1">Add, edit, or remove menu items</p>
-                </a>
-                <a
-                  href="/admin/tables"
+                </Link>
+                <Link
+                  to="/admin/tables"
                   className="block p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all"
                 >
                   <p className="font-semibold text-gray-900">🪑 Manage Tables</p>
                   <p className="text-sm text-gray-600 mt-1">View and manage table QR codes</p>
-                </a>
-                <a
-                  href="/admin/feedback"
+                </Link>
+                <Link
+                  to="/admin/feedback"
                   className="block p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all"
                 >
                   <p className="font-semibold text-gray-900">💬 View Feedback</p>
                   <p className="text-sm text-gray-600 mt-1">Read customer reviews</p>
-                </a>
+                </Link>
               </div>
             </div>
           </>

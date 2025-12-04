@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { FiPlus } from 'react-icons/fi';
 import QRCode from 'react-qr-code';
 import DashboardLayout from '../../components/layout/DashboardLayout';
@@ -22,6 +23,8 @@ export default function TableManagement() {
   useEffect(() => {
     if (user?.restaurant_id) {
       fetchTables();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
@@ -31,6 +34,7 @@ export default function TableManagement() {
       setTables(response.data);
     } catch (error) {
       toast.error('Failed to load tables');
+      console.error('Table fetch error:', error);
     } finally {
       setLoading(false);
     }
@@ -77,6 +81,25 @@ export default function TableManagement() {
     cleaning: 'bg-blue-100 text-blue-800',
   };
 
+  // Show message if no restaurant
+  if (!loading && !user?.restaurant_id) {
+    return (
+      <DashboardLayout>
+        <div className="p-8">
+          <div className="max-w-2xl mx-auto text-center py-20">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">No Restaurant Found</h1>
+            <p className="text-gray-600 mb-8">
+              Please create your restaurant first in Restaurant Management before managing tables.
+            </p>
+            <Link to="/admin/restaurant" className="btn-primary inline-block">
+              Go to Restaurant Management
+            </Link>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="p-8">
@@ -93,6 +116,10 @@ export default function TableManagement() {
         {loading ? (
           <div className="flex justify-center py-20">
             <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+          </div>
+        ) : tables.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-gray-500 text-lg">No tables yet. Add your first table!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

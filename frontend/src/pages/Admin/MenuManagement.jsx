@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { FiPlus, FiEdit, FiTrash2, FiToggleLeft, FiToggleRight } from 'react-icons/fi';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { menuAPI } from '../../services/api';
@@ -23,6 +24,8 @@ export default function MenuManagement() {
   useEffect(() => {
     if (user?.restaurant_id) {
       fetchMenuItems();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
@@ -32,6 +35,7 @@ export default function MenuManagement() {
       setMenuItems(response.data);
     } catch (error) {
       toast.error('Failed to load menu items');
+      console.error('Menu fetch error:', error);
     } finally {
       setLoading(false);
     }
@@ -90,6 +94,25 @@ export default function MenuManagement() {
   };
 
   const categories = [...new Set(menuItems.map((item) => item.category))];
+
+  // Show message if no restaurant
+  if (!loading && !user?.restaurant_id) {
+    return (
+      <DashboardLayout>
+        <div className="p-8">
+          <div className="max-w-2xl mx-auto text-center py-20">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">No Restaurant Found</h1>
+            <p className="text-gray-600 mb-8">
+              Please create your restaurant first in Restaurant Management before managing menu items.
+            </p>
+            <Link to="/admin/restaurant" className="btn-primary inline-block">
+              Go to Restaurant Management
+            </Link>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
