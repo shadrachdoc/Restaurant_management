@@ -1,0 +1,39 @@
+════════════════════════════════════════════════════════════════
+  ✅ SIGNUP ISSUE FIXED!
+════════════════════════════════════════════════════════════════
+
+PROBLEM:
+Frontend was trying to connect to: http://localhost:8000 (API Gateway)
+But services are running on: http://localhost:8001 (Auth Service)
+
+SOLUTION:
+Updated frontend/.env to point to correct port:
+  VITE_API_BASE_URL=http://localhost:8001
+  VITE_WS_URL=ws://localhost:8001
+
+Frontend has been restarted with new configuration.
+
+════════════════════════════════════════════════════════════════
+
+🚀 TRY AGAIN NOW!
+
+1. Open browser: http://localhost:3001/signup
+2. Fill in the signup form:
+   - Full Name: Test Admin
+   - Email: admin@test.com
+   - Username: testadmin
+   - Password: Password123!
+   - Role: Restaurant Admin
+
+3. Click "Create Account"
+
+✅ Should now work!
+
+════════════════════════════════════════════════════════════════
+
+If you still see issues:
+1. Hard refresh browser (Ctrl + Shift + R)
+2. Clear browser cache
+3. Check browser console (F12) for errors
+
+════════════════════════════════════════════════════════════════

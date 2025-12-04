@@ -1,116 +1,135 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// Service URLs - direct service calls (no API Gateway)
+const AUTH_SERVICE_URL = 'http://localhost:8001';
+const RESTAURANT_SERVICE_URL = 'http://localhost:8003';
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
+// Create axios instance for Auth Service
+const authApi = axios.create({
+  baseURL: AUTH_SERVICE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
+// Create axios instance for Restaurant Service
+const restaurantApi = axios.create({
+  baseURL: RESTAURANT_SERVICE_URL,
+  headers: {
+    'Content-Type': 'application/json',
   },
-  (error) => Promise.reject(error)
-);
+});
 
-// Response interceptor to handle errors
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    // If token expired, try to refresh
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (refreshToken) {
-          const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {
-            refresh_token: refreshToken,
-          });
-
-          const { access_token } = response.data;
-          localStorage.setItem('access_token', access_token);
-
-          originalRequest.headers.Authorization = `Bearer ${access_token}`;
-          return api(originalRequest);
-        }
-      } catch (refreshError) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
+// Helper function to add interceptors
+const addInterceptors = (instance) => {
+  // Request interceptor to add auth token
+  instance.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  // Response interceptor to handle errors
+  instance.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
+
+      // If token expired, try to refresh
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
+
+        try {
+          const refreshToken = localStorage.getItem('refresh_token');
+          if (refreshToken) {
+            const response = await axios.post(`${AUTH_SERVICE_URL}/api/v1/auth/refresh`, {
+              refresh_token: refreshToken,
+            });
+
+            const { access_token } = response.data;
+            localStorage.setItem('access_token', access_token);
+
+            originalRequest.headers.Authorization = `Bearer ${access_token}`;
+            return instance(originalRequest);
+          }
+        } catch (refreshError) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+          return Promise.reject(refreshError);
+        }
+      }
+
+      return Promise.reject(error);
     }
+  );
+};
 
-    return Promise.reject(error);
-  }
-);
+// Add interceptors to both instances
+addInterceptors(authApi);
+addInterceptors(restaurantApi);
 
-export default api;
+// Export default as auth API for backwards compatibility
+export default authApi;
 
-// Auth API
+// Auth API - uses Auth Service
 export const authAPI = {
-  login: (credentials) => api.post('/api/v1/auth/login', credentials),
-  signup: (userData) => api.post('/api/v1/auth/signup', userData),
-  logout: () => api.post('/api/v1/auth/logout'),
-  refreshToken: (refreshToken) => api.post('/api/v1/auth/refresh', { refresh_token: refreshToken }),
-  changePassword: (data) => api.post('/api/v1/auth/change-password', data),
-  getCurrentUser: () => api.get('/api/v1/users/me'),
+  login: (credentials) => authApi.post('/api/v1/auth/login', credentials),
+  signup: (userData) => authApi.post('/api/v1/auth/signup', userData),
+  logout: () => authApi.post('/api/v1/auth/logout'),
+  refreshToken: (refreshToken) => authApi.post('/api/v1/auth/refresh', { refresh_token: refreshToken }),
+  changePassword: (data) => authApi.post('/api/v1/auth/change-password', data),
+  getCurrentUser: () => authApi.get('/api/v1/users/me'),
 };
 
-// Restaurant API
+// Restaurant API - uses Restaurant Service
 export const restaurantAPI = {
-  list: (params) => api.get('/api/v1/restaurants', { params }),
-  get: (id) => api.get(`/api/v1/restaurants/${id}`),
-  getById: (id) => api.get(`/api/v1/restaurants/${id}`), // Alias for get
-  create: (data) => api.post('/api/v1/restaurants', data),
-  update: (id, data) => api.put(`/api/v1/restaurants/${id}`, data),
-  delete: (id) => api.delete(`/api/v1/restaurants/${id}`),
-  getAnalytics: (id) => api.get(`/api/v1/restaurants/${id}/analytics`),
-  updateBranding: (id, data) => api.patch(`/api/v1/restaurants/${id}/branding`, data),
-  toggleStatus: (id) => api.patch(`/api/v1/restaurants/${id}/toggle-status`),
+  list: (params) => restaurantApi.get('/api/v1/restaurants', { params }),
+  get: (id) => restaurantApi.get(`/api/v1/restaurants/${id}`),
+  getById: (id) => restaurantApi.get(`/api/v1/restaurants/${id}`), // Alias for get
+  create: (data) => restaurantApi.post('/api/v1/restaurants', data),
+  update: (id, data) => restaurantApi.put(`/api/v1/restaurants/${id}`, data),
+  delete: (id) => restaurantApi.delete(`/api/v1/restaurants/${id}`),
+  getAnalytics: (id) => restaurantApi.get(`/api/v1/restaurants/${id}/analytics`),
+  updateBranding: (id, data) => restaurantApi.patch(`/api/v1/restaurants/${id}/branding`, data),
+  toggleStatus: (id) => restaurantApi.patch(`/api/v1/restaurants/${id}/toggle-status`),
 };
 
-// Menu API
+// Menu API - uses Restaurant Service
 export const menuAPI = {
-  list: (restaurantId, params) => api.get(`/api/v1/restaurants/${restaurantId}/menu-items`, { params }),
-  get: (restaurantId, itemId) => api.get(`/api/v1/restaurants/${restaurantId}/menu-items/${itemId}`),
-  create: (restaurantId, data) => api.post(`/api/v1/restaurants/${restaurantId}/menu-items`, data),
-  update: (restaurantId, itemId, data) => api.put(`/api/v1/restaurants/${restaurantId}/menu-items/${itemId}`, data),
-  delete: (restaurantId, itemId) => api.delete(`/api/v1/restaurants/${restaurantId}/menu-items/${itemId}`),
-  toggleAvailability: (restaurantId, itemId) => api.patch(`/api/v1/restaurants/${restaurantId}/menu-items/${itemId}/toggle-availability`),
+  list: (restaurantId, params) => restaurantApi.get(`/api/v1/restaurants/${restaurantId}/menu-items`, { params }),
+  get: (restaurantId, itemId) => restaurantApi.get(`/api/v1/restaurants/${restaurantId}/menu-items/${itemId}`),
+  create: (restaurantId, data) => restaurantApi.post(`/api/v1/restaurants/${restaurantId}/menu-items`, data),
+  update: (restaurantId, itemId, data) => restaurantApi.put(`/api/v1/restaurants/${restaurantId}/menu-items/${itemId}`, data),
+  delete: (restaurantId, itemId) => restaurantApi.delete(`/api/v1/restaurants/${restaurantId}/menu-items/${itemId}`),
+  toggleAvailability: (restaurantId, itemId) => restaurantApi.patch(`/api/v1/restaurants/${restaurantId}/menu-items/${itemId}/toggle-availability`),
 };
 
-// Table API
+// Table API - uses Restaurant Service
 export const tableAPI = {
-  list: (restaurantId, params) => api.get(`/api/v1/restaurants/${restaurantId}/tables`, { params }),
-  get: (restaurantId, tableId) => api.get(`/api/v1/restaurants/${restaurantId}/tables/${tableId}`),
-  getById: (restaurantId, tableId) => api.get(`/api/v1/restaurants/${restaurantId}/tables/${tableId}`), // Alias for get
-  create: (restaurantId, data) => api.post(`/api/v1/restaurants/${restaurantId}/tables`, data),
-  update: (restaurantId, tableId, data) => api.put(`/api/v1/restaurants/${restaurantId}/tables/${tableId}`, data),
-  delete: (restaurantId, tableId) => api.delete(`/api/v1/restaurants/${restaurantId}/tables/${tableId}`),
+  list: (restaurantId, params) => restaurantApi.get(`/api/v1/restaurants/${restaurantId}/tables`, { params }),
+  get: (restaurantId, tableId) => restaurantApi.get(`/api/v1/restaurants/${restaurantId}/tables/${tableId}`),
+  getById: (restaurantId, tableId) => restaurantApi.get(`/api/v1/restaurants/${restaurantId}/tables/${tableId}`), // Alias for get
+  create: (restaurantId, data) => restaurantApi.post(`/api/v1/restaurants/${restaurantId}/tables`, data),
+  update: (restaurantId, tableId, data) => restaurantApi.put(`/api/v1/restaurants/${restaurantId}/tables/${tableId}`, data),
+  delete: (restaurantId, tableId) => restaurantApi.delete(`/api/v1/restaurants/${restaurantId}/tables/${tableId}`),
   updateStatus: (restaurantId, tableId, status) =>
-    api.patch(`/api/v1/restaurants/${restaurantId}/tables/${tableId}/status`, null, { params: { new_status: status } }),
-  getQRCode: (restaurantId, tableId) => api.get(`/api/v1/restaurants/${restaurantId}/tables/${tableId}/qr-code`),
-  regenerateQR: (restaurantId, tableId) => api.post(`/api/v1/restaurants/${restaurantId}/tables/${tableId}/regenerate-qr`),
+    restaurantApi.patch(`/api/v1/restaurants/${restaurantId}/tables/${tableId}/status`, null, { params: { new_status: status } }),
+  getQRCode: (restaurantId, tableId) => restaurantApi.get(`/api/v1/restaurants/${restaurantId}/tables/${tableId}/qr-code`),
+  regenerateQR: (restaurantId, tableId) => restaurantApi.post(`/api/v1/restaurants/${restaurantId}/tables/${tableId}/regenerate-qr`),
 };
 
-// Feedback API
+// Feedback API - uses Restaurant Service
 export const feedbackAPI = {
-  list: (restaurantId, params) => api.get(`/api/v1/restaurants/${restaurantId}/feedback`, { params }),
-  get: (restaurantId, feedbackId) => api.get(`/api/v1/restaurants/${restaurantId}/feedback/${feedbackId}`),
-  create: (restaurantId, data) => api.post(`/api/v1/restaurants/${restaurantId}/feedback`, data),
-  delete: (restaurantId, feedbackId) => api.delete(`/api/v1/restaurants/${restaurantId}/feedback/${feedbackId}`),
-  getSummary: (restaurantId, days) => api.get(`/api/v1/restaurants/${restaurantId}/feedback/stats/summary`, { params: { days } }),
+  list: (restaurantId, params) => restaurantApi.get(`/api/v1/restaurants/${restaurantId}/feedback`, { params }),
+  get: (restaurantId, feedbackId) => restaurantApi.get(`/api/v1/restaurants/${restaurantId}/feedback/${feedbackId}`),
+  create: (restaurantId, data) => restaurantApi.post(`/api/v1/restaurants/${restaurantId}/feedback`, data),
+  delete: (restaurantId, feedbackId) => restaurantApi.delete(`/api/v1/restaurants/${restaurantId}/feedback/${feedbackId}`),
+  getSummary: (restaurantId, days) => restaurantApi.get(`/api/v1/restaurants/${restaurantId}/feedback/stats/summary`, { params: { days } }),
 };
