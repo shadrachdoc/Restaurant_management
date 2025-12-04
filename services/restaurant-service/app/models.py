@@ -6,7 +6,7 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, Text, 
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 import uuid
-from shared.models.enums import MenuItemCategory, TableStatus, SubscriptionStatus, PricingPlan
+from shared.models.enums import MenuItemCategory, TableStatus, SubscriptionStatus, PricingPlan, OrderStatus
 from .database import Base
 
 
@@ -147,3 +147,70 @@ class Feedback(Base):
 
     def __repr__(self):
         return f"<Feedback(id={self.id}, restaurant_id={self.restaurant_id}, rating={self.rating})>"
+
+
+class Order(Base):
+    """Order model"""
+
+    __tablename__ = "orders"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    restaurant_id = Column(UUID(as_uuid=True), ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=False, index=True)
+    table_id = Column(UUID(as_uuid=True), ForeignKey("tables.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    # Order details
+    order_number = Column(String(50), nullable=False, unique=True, index=True)
+    status = Column(SQLEnum(OrderStatus), default=OrderStatus.PENDING, nullable=False, index=True)
+
+    # Customer info (optional - for public QR orders)
+    customer_name = Column(String(255), nullable=True)
+    customer_phone = Column(String(20), nullable=True)
+
+    # Pricing
+    subtotal = Column(Float, nullable=False, default=0.0)
+    tax = Column(Float, nullable=False, default=0.0)
+    total = Column(Float, nullable=False, default=0.0)
+
+    # Special instructions
+    special_instructions = Column(Text, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    restaurant = relationship("Restaurant")
+    table = relationship("Table")
+    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<Order(id={self.id}, number={self.order_number}, status={self.status})>"
+
+
+class OrderItem(Base):
+    """Order item model - individual items in an order"""
+
+    __tablename__ = "order_items"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
+    menu_item_id = Column(UUID(as_uuid=True), ForeignKey("menu_items.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    # Item details (stored at time of order in case menu item changes)
+    item_name = Column(String(255), nullable=False)
+    item_price = Column(Float, nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
+
+    # Special instructions for this item
+    special_instructions = Column(Text, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    order = relationship("Order", back_populates="items")
+    menu_item = relationship("MenuItem")
+
+    def __repr__(self):
+        return f"<OrderItem(id={self.id}, name={self.item_name}, quantity={self.quantity})>"

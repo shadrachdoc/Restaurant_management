@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FiHome, FiPackage, FiGrid, FiMessageSquare, FiLogOut, FiMenu, FiX } from 'react-icons/fi';
+import { FiHome, FiPackage, FiGrid, FiMessageSquare, FiLogOut, FiMenu, FiX, FiUsers } from 'react-icons/fi';
 import useAuthStore from '../../store/authStore';
 
 export default function DashboardLayout({ children }) {
@@ -19,6 +19,7 @@ export default function DashboardLayout({ children }) {
     { path: '/admin/restaurant', icon: FiPackage, label: 'Restaurant' },
     { path: '/admin/menu', icon: FiGrid, label: 'Menu' },
     { path: '/admin/tables', icon: FiGrid, label: 'Tables' },
+    { path: '/admin/staff', icon: FiUsers, label: 'Staff' },
     { path: '/admin/feedback', icon: FiMessageSquare, label: 'Feedback' },
   ];
 

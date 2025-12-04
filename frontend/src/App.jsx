@@ -16,6 +16,7 @@ import AdminDashboard from './pages/Admin/AdminDashboard';
 import RestaurantManagement from './pages/Admin/RestaurantManagement';
 import MenuManagement from './pages/Admin/MenuManagement';
 import TableManagement from './pages/Admin/TableManagement';
+import StaffManagement from './pages/Admin/StaffManagement';
 import FeedbackView from './pages/Admin/FeedbackView';
 
 // Chef Pages
@@ -127,6 +128,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['restaurant_admin']}>
               <TableManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/staff"
+          element={
+            <ProtectedRoute allowedRoles={['restaurant_admin']}>
+              <StaffManagement />
             </ProtectedRoute>
           }
         />
