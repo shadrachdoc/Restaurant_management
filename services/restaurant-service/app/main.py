@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from shared.config.settings import settings
 from shared.utils.logger import setup_logger
 from .database import init_db, close_db
-from .routes import restaurants, menu_items, tables, feedback
+from .routes import restaurants, menu_items, tables, feedback, orders
 
 # Setup logger
 logger = setup_logger("restaurant-service", settings.log_level, settings.log_format)
@@ -69,6 +69,12 @@ app.include_router(
     feedback.router,
     prefix="/api/v1/restaurants",
     tags=["Feedback"]
+)
+
+app.include_router(
+    orders.router,
+    prefix="/api/v1",
+    tags=["Orders"]
 )
 
 

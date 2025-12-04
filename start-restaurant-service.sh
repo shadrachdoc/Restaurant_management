@@ -10,6 +10,7 @@ export SESSION_SECRET="your-super-secret-session-key-min-32-characters-long"
 export APP_RESTAURANT_SERVICE_PORT=8003
 export QR_CODE_BASE_URL="http://localhost:3001"
 
+export PYTHONPATH="/home/shadrach/Restaurant_management:${PYTHONPATH}"
 cd services/restaurant-service
 
 echo "🍽️  Starting Restaurant Service on port 8003..."
