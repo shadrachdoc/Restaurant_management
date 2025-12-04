@@ -11,6 +11,9 @@ import QRScanLanding from './pages/Customer/QRScanLanding';
 import MenuView from './pages/Customer/MenuView';
 import OrderTracking from './pages/Customer/OrderTracking';
 
+// Public Pages (No Auth Required)
+import PublicMenu from './pages/Public/PublicMenu';
+
 // Restaurant Admin Pages
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import RestaurantManagement from './pages/Admin/RestaurantManagement';
@@ -91,6 +94,9 @@ function App() {
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+
+        {/* Public Routes - QR Code Menu (No Auth) */}
+        <Route path="/menu/:restaurantId/:tableId" element={<PublicMenu />} />
 
         {/* Customer Routes - QR Code Flow */}
         <Route path="/table/:tableId" element={<QRScanLanding />} />
