@@ -227,7 +227,7 @@ async def create_chef(
     """
     Create a new chef account (Restaurant Admin only)
     """
-    from ..security import get_password_hash
+    from ..security import hash_password
 
     # Check if username already exists
     username_check = await db.execute(
@@ -255,7 +255,7 @@ async def create_chef(
         username=chef_data['username'],
         email=chef_data.get('email'),
         full_name=chef_data.get('full_name'),
-        password_hash=get_password_hash(chef_data['password']),
+        hashed_password=hash_password(chef_data['password']),
         role=UserRole.CHEF,
         restaurant_id=chef_data.get('restaurant_id'),
         is_active=True
@@ -363,7 +363,7 @@ async def create_customer(
     """
     Create a new customer account (Restaurant Admin only)
     """
-    from ..security import get_password_hash
+    from ..security import hash_password
 
     # Check if username already exists
     username_check = await db.execute(
@@ -391,7 +391,7 @@ async def create_customer(
         username=customer_data['username'],
         email=customer_data.get('email'),
         full_name=customer_data.get('full_name'),
-        password_hash=get_password_hash(customer_data['password']),
+        hashed_password=hash_password(customer_data['password']),
         role=UserRole.CUSTOMER,
         restaurant_id=customer_data.get('restaurant_id'),
         is_active=True
