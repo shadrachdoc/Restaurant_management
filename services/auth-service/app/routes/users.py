@@ -9,7 +9,7 @@ from uuid import UUID
 from ..database import get_db
 from ..models import User
 from ..schemas import UserResponse, UserUpdate, StaffUpdate, MessageResponse
-from ..security import get_current_user_id, require_role
+from ..security import get_current_user_id, require_role, hash_password
 from shared.models.enums import UserRole
 from shared.utils.logger import setup_logger
 
@@ -212,6 +212,65 @@ async def toggle_user_status(
     await db.refresh(user)
 
     logger.info(f"User status toggled: {user.username} -> {'active' if user.is_active else 'inactive'}")
+
+    return user
+
+
+@router.patch("/{user_id}", response_model=UserResponse)
+async def update_staff(
+    user_id: UUID,
+    staff_data: StaffUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.MASTER_ADMIN, UserRole.RESTAURANT_ADMIN))
+):
+    """
+    Update staff member details (Admin only)
+    Allows updating full_name, email, phone, password, and is_active
+    """
+    # Fetch the user to update
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # If RESTAURANT_ADMIN, verify they can only update users from their restaurant
+    if current_user.get('role') == UserRole.RESTAURANT_ADMIN.value:
+        current_restaurant_id_str = current_user.get('restaurant_id')
+        if current_restaurant_id_str:
+            current_restaurant_id = UUID(current_restaurant_id_str)
+        else:
+            current_restaurant_id = None
+
+        if user.restaurant_id != current_restaurant_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only update staff from your own restaurant"
+            )
+
+    # Update fields if provided
+    if staff_data.full_name is not None:
+        user.full_name = staff_data.full_name
+    if staff_data.email is not None:
+        user.email = staff_data.email
+    if staff_data.phone is not None:
+        user.phone = staff_data.phone
+    if staff_data.is_active is not None:
+        user.is_active = staff_data.is_active
+
+    # Update password if provided
+    if staff_data.password:
+        user.hashed_password = hash_password(staff_data.password)
+
+    await db.commit()
+    await db.refresh(user)
+
+    logger.info(f"Staff member updated: {user.username} (ID: {user_id})")
 
     return user
 
