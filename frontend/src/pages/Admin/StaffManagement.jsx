@@ -68,15 +68,22 @@ export default function StaffManagement() {
     if (!confirm(`Are you sure you want to delete ${staffMember.full_name || staffMember.username}?`)) return;
 
     try {
-      if (staffMember.role === 'CHEF') {
+      // Use role-specific delete endpoints (RESTAURANT_ADMIN has permission for these)
+      const role = staffMember.role?.toUpperCase();
+      if (role === 'CHEF') {
         await staffAPI.deleteChef(staffMember.id);
-      } else {
+      } else if (role === 'CUSTOMER') {
         await staffAPI.deleteCustomer(staffMember.id);
+      } else {
+        toast.error(`Cannot delete user with role: ${staffMember.role}`);
+        return;
       }
       toast.success('Account deleted');
       fetchStaff();
     } catch (error) {
-      toast.error('Failed to delete account');
+      console.error('Delete error:', error);
+      const errorMsg = error.response?.data?.detail || 'Failed to delete account';
+      toast.error(errorMsg);
     }
   };
 

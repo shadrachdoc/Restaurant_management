@@ -311,7 +311,13 @@ async def delete_chef(
         )
 
     # Verify the chef belongs to the current user's restaurant
-    if chef.restaurant_id != current_user.get('restaurant_id'):
+    current_restaurant_id_str = current_user.get('restaurant_id')
+    if current_restaurant_id_str:
+        current_restaurant_id = UUID(current_restaurant_id_str)
+    else:
+        current_restaurant_id = None
+
+    if chef.restaurant_id != current_restaurant_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only delete chefs from your own restaurant"
