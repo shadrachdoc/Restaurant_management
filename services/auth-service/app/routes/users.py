@@ -8,7 +8,7 @@ from typing import List
 from uuid import UUID
 from ..database import get_db
 from ..models import User
-from ..schemas import UserResponse, UserUpdate, MessageResponse
+from ..schemas import UserResponse, UserUpdate, StaffUpdate, MessageResponse
 from ..security import get_current_user_id, require_role
 from shared.models.enums import UserRole
 from shared.utils.logger import setup_logger
@@ -433,7 +433,13 @@ async def delete_customer(
         )
 
     # Verify the customer belongs to the current user's restaurant
-    if customer.restaurant_id != current_user.get('restaurant_id'):
+    current_restaurant_id_str = current_user.get('restaurant_id')
+    if current_restaurant_id_str:
+        current_restaurant_id = UUID(current_restaurant_id_str)
+    else:
+        current_restaurant_id = None
+
+    if customer.restaurant_id != current_restaurant_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only delete customers from your own restaurant"

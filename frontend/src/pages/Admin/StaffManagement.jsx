@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FiPlus, FiTrash2, FiUsers } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiUsers, FiEdit2 } from 'react-icons/fi';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { staffAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
@@ -10,6 +10,7 @@ export default function StaffManagement() {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(null); // Staff member being edited
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'chef', 'customer'
   const [staffType, setStaffType] = useState('chef'); // Type to create
   const [formData, setFormData] = useState({
@@ -42,25 +43,64 @@ export default function StaffManagement() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const data = {
-        ...formData,
-        restaurant_id: user.restaurant_id,
-      };
+      if (editingStaff) {
+        // Update existing staff
+        const updateData = {
+          full_name: formData.full_name,
+          email: formData.email,
+        };
+        // Only include password if it's provided
+        if (formData.password) {
+          updateData.password = formData.password;
+        }
 
-      if (staffType === 'chef') {
-        await staffAPI.createChef(data);
-        toast.success('Chef account created successfully!');
+        await staffAPI.updateStaff(editingStaff.id, updateData);
+        toast.success('Staff account updated successfully!');
       } else {
-        await staffAPI.createCustomer(data);
-        toast.success('Customer account created successfully!');
+        // Create new staff
+        const data = {
+          ...formData,
+          restaurant_id: user.restaurant_id,
+        };
+
+        if (staffType === 'chef') {
+          await staffAPI.createChef(data);
+          toast.success('Chef account created successfully!');
+        } else {
+          await staffAPI.createCustomer(data);
+          toast.success('Customer account created successfully!');
+        }
       }
 
       setShowModal(false);
+      setEditingStaff(null);
       resetForm();
       fetchStaff();
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || `Failed to create ${staffType} account`;
+      const errorMsg = error.response?.data?.detail || `Failed to ${editingStaff ? 'update' : 'create'} account`;
       toast.error(errorMsg);
+    }
+  };
+
+  const handleEdit = (staffMember) => {
+    setEditingStaff(staffMember);
+    setFormData({
+      username: staffMember.username,
+      email: staffMember.email || '',
+      password: '', // Leave empty, only update if provided
+      full_name: staffMember.full_name || '',
+    });
+    setStaffType(staffMember.role?.toLowerCase() || 'chef');
+    setShowModal(true);
+  };
+
+  const handleToggleStatus = async (staffMember) => {
+    try {
+      await staffAPI.toggleStatus(staffMember.id);
+      toast.success(`Account ${staffMember.is_active ? 'deactivated' : 'activated'}`);
+      fetchStaff();
+    } catch (error) {
+      toast.error('Failed to toggle account status');
     }
   };
 
@@ -239,12 +279,20 @@ export default function StaffManagement() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => handleDelete(member)}
-                        className="text-red-600 hover:text-red-900 flex items-center gap-1"
-                      >
-                        <FiTrash2 /> Delete
-                      </button>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => handleEdit(member)}
+                          className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                        >
+                          <FiEdit2 /> Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(member)}
+                          className="text-red-600 hover:text-red-900 flex items-center gap-1"
+                        >
+                          <FiTrash2 /> Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -257,37 +305,41 @@ export default function StaffManagement() {
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl max-w-md w-full p-8">
-              <h2 className="text-2xl font-bold mb-6">Add New Staff Member</h2>
+              <h2 className="text-2xl font-bold mb-6">
+                {editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
+              </h2>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Staff Type Selection */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Staff Type</label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="staffType"
-                        value="chef"
-                        checked={staffType === 'chef'}
-                        onChange={(e) => setStaffType(e.target.value)}
-                        className="mr-2"
-                      />
-                      <span>Chef</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="staffType"
-                        value="customer"
-                        checked={staffType === 'customer'}
-                        onChange={(e) => setStaffType(e.target.value)}
-                        className="mr-2"
-                      />
-                      <span>Customer</span>
-                    </label>
+                {/* Staff Type Selection - Only show when creating new staff */}
+                {!editingStaff && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Staff Type</label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="staffType"
+                          value="chef"
+                          checked={staffType === 'chef'}
+                          onChange={(e) => setStaffType(e.target.value)}
+                          className="mr-2"
+                        />
+                        <span>Chef</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="staffType"
+                          value="customer"
+                          checked={staffType === 'customer'}
+                          onChange={(e) => setStaffType(e.target.value)}
+                          className="mr-2"
+                        />
+                        <span>Customer</span>
+                      </label>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium mb-1">Full Name</label>
@@ -307,8 +359,12 @@ export default function StaffManagement() {
                     className="input-field"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    required
+                    disabled={editingStaff}
+                    required={!editingStaff}
                   />
+                  {editingStaff && (
+                    <p className="text-xs text-gray-500 mt-1">Username cannot be changed</p>
+                  )}
                 </div>
 
                 <div>
@@ -323,26 +379,33 @@ export default function StaffManagement() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Password</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Password {editingStaff && '(leave empty to keep current)'}
+                  </label>
                   <input
                     type="password"
                     className="input-field"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
+                    required={!editingStaff}
                     minLength="8"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {editingStaff
+                      ? 'Only enter a password if you want to change it (minimum 8 characters)'
+                      : 'Minimum 8 characters'}
+                  </p>
                 </div>
 
                 <div className="flex gap-4 pt-4">
                   <button type="submit" className="btn-primary flex-1">
-                    Create {staffType === 'chef' ? 'Chef' : 'Customer'}
+                    {editingStaff ? 'Update Staff' : `Create ${staffType === 'chef' ? 'Chef' : 'Customer'}`}
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setShowModal(false);
+                      setEditingStaff(null);
                       resetForm();
                     }}
                     className="btn-secondary flex-1"

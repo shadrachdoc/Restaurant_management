@@ -94,6 +94,8 @@ export const staffAPI = {
   listStaff: (restaurantId, role) => authApi.get(`/api/v1/users/staff/${restaurantId}`, { params: { role } }),
   createChef: (data) => authApi.post('/api/v1/users/chef', data),
   createCustomer: (data) => authApi.post('/api/v1/users/customer', data),
+  updateStaff: (userId, data) => authApi.patch(`/api/v1/users/${userId}`, data),
+  toggleStatus: (userId) => authApi.patch(`/api/v1/users/${userId}/toggle-status`),
   deleteChef: (chefId) => authApi.delete(`/api/v1/users/chef/${chefId}`),
   deleteCustomer: (customerId) => authApi.delete(`/api/v1/users/customer/${customerId}`),
 };

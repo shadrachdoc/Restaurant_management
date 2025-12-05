@@ -31,6 +31,15 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
+class StaffUpdate(BaseModel):
+    """Schema for staff update by admin (includes password)"""
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = Field(None, min_length=8, max_length=100)
+    is_active: Optional[bool] = None
+
+
 class UserResponse(UserBase):
     """Schema for user response"""
     id: UUID4
