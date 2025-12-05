@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiShoppingCart, FiPlus, FiMinus, FiX, FiCheck } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { restaurantAPI } from '../../services/api';
+import { restaurantAPI, menuAPI, orderAPI } from '../../services/api';
 
 export default function PublicMenu() {
   const { restaurantId, tableId } = useParams();
@@ -29,11 +29,11 @@ export default function PublicMenu() {
   const fetchRestaurantAndMenu = async () => {
     try {
       // Fetch restaurant details
-      const restaurantRes = await restaurantAPI.get(`/api/v1/restaurants/${restaurantId}`);
+      const restaurantRes = await restaurantAPI.get(restaurantId);
       setRestaurant(restaurantRes.data);
 
       // Fetch menu items
-      const menuRes = await restaurantAPI.get(`/api/v1/restaurants/${restaurantId}/menu-items?is_available=true`);
+      const menuRes = await menuAPI.list(restaurantId, { is_available: true });
       setMenuItems(menuRes.data);
     } catch (error) {
       console.error('Failed to fetch menu:', error);
@@ -121,7 +121,7 @@ export default function PublicMenu() {
         }))
       };
 
-      const response = await restaurantAPI.post('/api/v1/orders', orderData);
+      const response = await orderAPI.create(orderData);
 
       toast.success('Order placed successfully!');
 

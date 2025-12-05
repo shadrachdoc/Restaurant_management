@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FiClock, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
-import { restaurantAPI } from '../../services/api';
+import { orderAPI } from '../../services/api';
 
 export default function KitchenDashboard() {
   const { user } = useAuthStore();
@@ -24,9 +24,9 @@ export default function KitchenDashboard() {
       if (showRefreshing) setRefreshing(true);
 
       // Fetch active orders (not completed or cancelled)
-      const response = await restaurantAPI.get(
-        `/api/v1/restaurants/${user.restaurant_id}/orders?limit=100`
-      );
+      const response = await orderAPI.list(user.restaurant_id, {
+        limit: 100
+      });
 
       // Filter to only show active orders
       const activeOrders = response.data.filter(
@@ -45,9 +45,7 @@ export default function KitchenDashboard() {
 
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
-      await restaurantAPI.patch(`/api/v1/orders/${orderId}/status`, {
-        status: newStatus
-      });
+      await orderAPI.updateStatus(orderId, newStatus);
 
       toast.success(`Order ${newStatus}!`);
       fetchOrders(); // Refresh orders
@@ -61,7 +59,7 @@ export default function KitchenDashboard() {
     if (!confirm('Are you sure you want to cancel this order?')) return;
 
     try {
-      await restaurantAPI.delete(`/api/v1/orders/${orderId}`);
+      await orderAPI.cancel(orderId);
       toast.success('Order cancelled');
       fetchOrders(); // Refresh orders
     } catch (error) {

@@ -143,3 +143,12 @@ export const feedbackAPI = {
   delete: (restaurantId, feedbackId) => restaurantApi.delete(`/api/v1/restaurants/${restaurantId}/feedback/${feedbackId}`),
   getSummary: (restaurantId, days) => restaurantApi.get(`/api/v1/restaurants/${restaurantId}/feedback/stats/summary`, { params: { days } }),
 };
+
+// Order API - uses Restaurant Service
+export const orderAPI = {
+  list: (restaurantId, params) => restaurantApi.get(`/api/v1/restaurants/${restaurantId}/orders`, { params }),
+  get: (orderId) => restaurantApi.get(`/api/v1/orders/${orderId}`),
+  create: (data) => restaurantApi.post('/api/v1/orders', data),
+  updateStatus: (orderId, status) => restaurantApi.patch(`/api/v1/orders/${orderId}/status`, { status }),
+  cancel: (orderId) => restaurantApi.delete(`/api/v1/orders/${orderId}`),
+};
