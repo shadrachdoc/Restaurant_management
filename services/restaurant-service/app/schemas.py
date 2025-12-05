@@ -4,7 +4,7 @@ Pydantic schemas for Restaurant Service
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, UUID4, HttpUrl
-from shared.models.enums import MenuItemCategory, TableStatus, SubscriptionStatus, PricingPlan
+from shared.models.enums import MenuItemCategory, TableStatus, SubscriptionStatus, PricingPlan, OrderStatus
 
 
 # Restaurant Schemas
@@ -191,6 +191,65 @@ class QRCodeResponse(BaseModel):
     table_number: str
     qr_code_url: str
     qr_code_data: str
+
+
+# Order Schemas
+class OrderItemCreate(BaseModel):
+    """Schema for creating an order item"""
+    menu_item_id: UUID4
+    quantity: int = Field(..., ge=1, le=100)
+    special_instructions: Optional[str] = None
+
+
+class OrderItemResponse(BaseModel):
+    """Schema for order item response"""
+    id: UUID4
+    order_id: UUID4
+    menu_item_id: Optional[UUID4] = None
+    item_name: str
+    item_price: float
+    quantity: int
+    special_instructions: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class OrderCreate(BaseModel):
+    """Schema for creating an order (public - no auth required)"""
+    table_id: UUID4
+    items: List[OrderItemCreate] = Field(..., min_length=1)
+    customer_name: Optional[str] = Field(None, max_length=255)
+    customer_phone: Optional[str] = Field(None, max_length=20)
+    special_instructions: Optional[str] = None
+
+
+class OrderUpdateStatus(BaseModel):
+    """Schema for updating order status (chef/admin only)"""
+    status: OrderStatus
+
+
+class OrderResponse(BaseModel):
+    """Schema for order response"""
+    id: UUID4
+    restaurant_id: UUID4
+    table_id: Optional[UUID4] = None
+    order_number: str
+    status: OrderStatus
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
+    subtotal: float
+    tax: float
+    total: float
+    special_instructions: Optional[str] = None
+    items: List[OrderItemResponse] = []
+    created_at: datetime
+    updated_at: datetime
+    completed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
 
 
 # Analytics Schemas

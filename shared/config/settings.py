@@ -39,7 +39,7 @@ class Settings(BaseSettings):
 
     # CORS
     cors_origins: List[str] = Field(
-        default=["http://localhost:3000", "http://localhost:5173"],
+        default=["http://localhost:3000", "http://localhost:3001", "http://localhost:5173"],
         alias="CORS_ORIGINS"
     )
 
@@ -79,6 +79,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore"
 
     @property
     def redis_url(self) -> str:

@@ -7,15 +7,19 @@ import LoginPage from './pages/Auth/LoginPage';
 import SignupPage from './pages/Auth/SignupPage';
 
 // Customer Pages
-import CustomerHome from './pages/Customer/CustomerHome';
+import QRScanLanding from './pages/Customer/QRScanLanding';
 import MenuView from './pages/Customer/MenuView';
 import OrderTracking from './pages/Customer/OrderTracking';
+
+// Public Pages (No Auth Required)
+import PublicMenu from './pages/Public/PublicMenu';
 
 // Restaurant Admin Pages
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import RestaurantManagement from './pages/Admin/RestaurantManagement';
 import MenuManagement from './pages/Admin/MenuManagement';
 import TableManagement from './pages/Admin/TableManagement';
+import StaffManagement from './pages/Admin/StaffManagement';
 import FeedbackView from './pages/Admin/FeedbackView';
 
 // Chef Pages
@@ -44,7 +48,7 @@ function App() {
 
   // Redirect authenticated users to appropriate dashboard
   const getDefaultRoute = () => {
-    if (!isAuthenticated) return '/customer';
+    if (!isAuthenticated) return '/login';
 
     switch (user?.role) {
       case 'master_admin':
@@ -55,7 +59,7 @@ function App() {
         return '/kitchen';
       case 'customer':
       default:
-        return '/customer';
+        return '/customer/orders';
     }
   };
 
@@ -91,9 +95,13 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
 
-        {/* Customer Routes */}
-        <Route path="/customer" element={<CustomerHome />} />
+        {/* Public Routes - QR Code Menu (No Auth) */}
+        <Route path="/menu/:restaurantId/:tableId" element={<PublicMenu />} />
+
+        {/* Customer Routes - QR Code Flow */}
+        <Route path="/table/:tableId" element={<QRScanLanding />} />
         <Route path="/menu/:restaurantId" element={<MenuView />} />
+        <Route path="/customer/orders" element={<OrderTracking />} />
         <Route path="/order/:orderId" element={<OrderTracking />} />
 
         {/* Restaurant Admin Routes */}
@@ -126,6 +134,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['restaurant_admin']}>
               <TableManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/staff"
+          element={
+            <ProtectedRoute allowedRoles={['restaurant_admin']}>
+              <StaffManagement />
             </ProtectedRoute>
           }
         />

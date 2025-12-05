@@ -10,7 +10,7 @@ export default function SignupPage() {
     password: '',
     confirmPassword: '',
     full_name: '',
-    role: 'customer',
+    role: 'restaurant_admin',
   });
   const [errors, setErrors] = useState({});
   const { signup, isLoading } = useAuthStore();
@@ -59,12 +59,12 @@ export default function SignupPage() {
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-blue-800 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">🍽️ Join Us</h1>
-          <p className="text-purple-100">Create your account</p>
+          <h1 className="text-4xl font-bold text-white mb-2">🍽️ Restaurant Registration</h1>
+          <p className="text-purple-100">Register your restaurant to get started</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Sign Up</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Restaurant Admin Signup</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -114,19 +114,7 @@ export default function SignupPage() {
               {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-              <select
-                name="role"
-                className="input-field"
-                value={formData.role}
-                onChange={handleChange}
-              >
-                <option value="customer">Customer</option>
-                <option value="restaurant_admin">Restaurant Admin</option>
-                <option value="chef">Chef</option>
-              </select>
-            </div>
+            {/* Role is automatically set to restaurant_admin - no selection needed */}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
