@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiPlus } from 'react-icons/fi';
+import { FiPlus, FiTrash2 } from 'react-icons/fi';
 import QRCode from 'react-qr-code';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { tableAPI } from '../../services/api';
@@ -71,6 +71,21 @@ export default function TableManagement() {
       setShowQR(response.data);
     } catch (error) {
       toast.error('Failed to regenerate QR');
+    }
+  };
+
+  const handleDelete = async (table) => {
+    if (!confirm(`Are you sure you want to delete Table ${table.table_number}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await tableAPI.delete(user.restaurant_id, table.id);
+      toast.success(`Table ${table.table_number} deleted successfully!`);
+      fetchTables();
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to delete table');
     }
   };
 
@@ -171,18 +186,26 @@ export default function TableManagement() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2">
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowQR(table)}
+                      className="flex-1 btn-secondary text-sm"
+                    >
+                      View QR
+                    </button>
+                    <button
+                      onClick={() => regenerateQR(table.id)}
+                      className="flex-1 bg-blue-100 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-200 text-sm"
+                    >
+                      Regenerate
+                    </button>
+                  </div>
                   <button
-                    onClick={() => setShowQR(table)}
-                    className="flex-1 btn-secondary text-sm"
+                    onClick={() => handleDelete(table)}
+                    className="w-full bg-red-100 text-red-600 px-3 py-2 rounded-lg hover:bg-red-200 text-sm flex items-center justify-center gap-1"
                   >
-                    View QR
-                  </button>
-                  <button
-                    onClick={() => regenerateQR(table.id)}
-                    className="flex-1 bg-blue-100 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-200 text-sm"
-                  >
-                    Regenerate
+                    <FiTrash2 /> Delete Table
                   </button>
                 </div>
               </div>

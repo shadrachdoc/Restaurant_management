@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: restaurant-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "restaurant-system.labels" . | nindent 4 }}
+data:
+  ENVIRONMENT: {{ .Values.config.environment | quote }}
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  JWT_ALGORITHM: {{ .Values.config.jwtAlgorithm | quote }}
+  ACCESS_TOKEN_EXPIRE_MINUTES: {{ .Values.config.accessTokenExpireMinutes | quote }}
+  REFRESH_TOKEN_EXPIRE_DAYS: {{ .Values.config.refreshTokenExpireDays | quote }}
+
+  # Database configuration
+  POSTGRES_HOST: {{ include "restaurant-system.postgresql.host" . | quote }}
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: {{ .Values.postgresql.auth.database | quote }}
+
+  # Redis configuration
+  REDIS_HOST: {{ include "restaurant-system.redis.host" . | quote }}
+  REDIS_PORT: "6379"
+
+  # Service URLs (for API Gateway)
+  AUTH_SERVICE_URL: {{ .Values.apiGateway.env.AUTH_SERVICE_URL | quote }}
+  RESTAURANT_SERVICE_URL: {{ .Values.apiGateway.env.RESTAURANT_SERVICE_URL | quote }}
+  POS_SERVICE_URL: {{ .Values.apiGateway.env.POS_SERVICE_URL | quote }}
+
+  # Rate limiting
+  RATE_LIMIT_REQUESTS: {{ .Values.apiGateway.env.RATE_LIMIT_REQUESTS | quote }}
+  RATE_LIMIT_WINDOW: {{ .Values.apiGateway.env.RATE_LIMIT_WINDOW | quote }}

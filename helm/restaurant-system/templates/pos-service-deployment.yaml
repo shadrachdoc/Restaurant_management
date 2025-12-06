@@ -1,0 +1,96 @@
+{{- if .Values.posService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.posService.name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "restaurant-system.posService.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.posService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.posService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.posService.name }}
+        {{- include "restaurant-system.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: pos-service
+        image: "{{ .Values.global.imageRegistry }}/{{ .Values.posService.image.repository }}:{{ .Values.posService.image.tag }}"
+        imagePullPolicy: {{ .Values.posService.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.posService.service.port }}
+          name: http
+          protocol: TCP
+        env:
+        - name: POSTGRES_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: POSTGRES_HOST
+        - name: POSTGRES_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: POSTGRES_PORT
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: POSTGRES_DB
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: POSTGRES_PASSWORD
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: JWT_SECRET_KEY
+        - name: JWT_ALGORITHM
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: JWT_ALGORITHM
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: LOG_LEVEL
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: ENVIRONMENT
+        resources:
+          {{- toYaml .Values.posService.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /api/v1/pos/health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/pos/health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+{{- end }}
