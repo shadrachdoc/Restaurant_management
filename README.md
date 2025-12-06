@@ -1,50 +1,36 @@
 # Restaurant Menu & Order Management System
 
-A fully responsive, microservices-based restaurant management platform with QR code ordering, real-time updates, and multi-tenant support.
+A fully responsive restaurant management platform with QR code ordering, real-time updates, and comprehensive admin controls.
 
 ## Architecture
 
-### Microservices
-- **Auth Service** (Port 8001) - Authentication & authorization with JWT
-- **Master Admin Service** (Port 8002) - Multi-restaurant management
-- **Restaurant Service** (Port 8003) - Menu, tables, branding
-- **Order Service** (Port 8004) - Order processing
-- **Kitchen Service** (Port 8005) - Chef operations
-- **Notification Service** (Port 8006) - WebSocket & real-time events
-- **API Gateway** (Port 8000) - Unified API entry point
+### Services
+- **Auth Service** (Port 8001) - Authentication, authorization, and user management with JWT
+- **Restaurant Service** (Port 8003) - Restaurant, menu, table, order, and feedback management
+- **Frontend** (Port 3000) - React SPA with Vite
 
 ### Tech Stack
 - **Backend**: Python 3.11+ with FastAPI
-- **Frontend**: React 18+ with Vite
+- **Frontend**: React 18+ with Vite, TailwindCSS
 - **Database**: PostgreSQL 15+
 - **Cache**: Redis 7+
-- **Message Queue**: RabbitMQ
-- **Container Orchestration**: Kubernetes (KIND for local dev)
-- **CI/CD**: GitHub Actions
-- **Monitoring**: New Relic
+- **Container Orchestration**: Kubernetes / Docker Compose
+- **Image Registry**: DockerHub
 
 ## Project Structure
 ```
 ├── services/
-│   ├── auth-service/
-│   ├── master-admin-service/
-│   ├── restaurant-service/
-│   ├── order-service/
-│   ├── kitchen-service/
-│   ├── notification-service/
-│   └── api-gateway/
-├── frontend/
-│   └── restaurant-app/
+│   ├── auth-service/          # Authentication & user management
+│   └── restaurant-service/    # Restaurant operations
+├── frontend/                  # React application
 ├── infrastructure/
-│   ├── kubernetes/
-│   ├── docker/
-│   └── monitoring/
-├── shared/
+│   └── kubernetes/           # K8s manifests
+├── shared/                   # Shared models & utilities
 │   ├── models/
 │   ├── utils/
 │   └── config/
-├── scripts/
-└── docs/
+├── scripts/                  # Deployment scripts
+└── docs/                     # Documentation
 ```
 
 ## Getting Started
@@ -53,10 +39,8 @@ A fully responsive, microservices-based restaurant management platform with QR c
 - Python 3.11+
 - Node.js 18+
 - Docker & Docker Compose
-- KIND (Kubernetes in Docker)
 - PostgreSQL 15+
 - Redis 7+
-- RabbitMQ
 
 ### Local Development Setup
 
@@ -75,89 +59,125 @@ pip install -r requirements.txt
 
 3. **Install frontend dependencies**
 ```bash
-cd frontend/restaurant-app
+cd frontend
 npm install
 ```
 
 4. **Start infrastructure services**
 ```bash
-docker-compose up -d postgres redis rabbitmq
+docker-compose up -d postgres redis
 ```
 
-5. **Run database migrations**
+5. **Start backend services**
+
+Terminal 1 - Auth Service:
 ```bash
-./scripts/migrate.sh
+source venv/bin/activate
+cd services/auth-service
+uvicorn app.main:app --reload --port 8001
 ```
 
-6. **Start all microservices**
+Terminal 2 - Restaurant Service:
 ```bash
-./scripts/start-services.sh
+source venv/bin/activate
+cd services/restaurant-service
+uvicorn app.main:app --reload --port 8003
 ```
 
-7. **Start frontend**
+6. **Start frontend**
 ```bash
-cd frontend/restaurant-app
+cd frontend
 npm run dev
 ```
 
-### Docker Deployment
+### Quick Start with Scripts
 
 ```bash
-docker-compose up --build
+# Start auth service
+./start-auth-service.sh
+
+# Start restaurant service
+./start-restaurant-service.sh
+
+# Start frontend
+cd frontend && npm run dev
 ```
 
-### Kubernetes Deployment
+## Kubernetes Deployment
+
+See [K8S_DEPLOYMENT.md](K8S_DEPLOYMENT.md) for comprehensive Kubernetes deployment guide using DockerHub.
+
+### Quick K8s Deployment
 
 ```bash
-# Create KIND cluster
-kind create cluster --config infrastructure/kubernetes/kind-config.yaml
+# 1. Login to DockerHub
+docker login
 
-# Deploy services
-kubectl apply -f infrastructure/kubernetes/
+# 2. Set your DockerHub username
+export DOCKERHUB_USERNAME=your_dockerhub_username
+
+# 3. Clean up old services (optional)
+./cleanup-old-services.sh
+
+# 4. Deploy to Kubernetes
+./deploy-to-dockerhub.sh
 ```
 
 ## API Documentation
 
 Once services are running, access API documentation at:
-- API Gateway: http://localhost:8000/docs
 - Auth Service: http://localhost:8001/docs
-- Master Admin: http://localhost:8002/docs
 - Restaurant Service: http://localhost:8003/docs
-- Order Service: http://localhost:8004/docs
-- Kitchen Service: http://localhost:8005/docs
 
 ## Features
 
 ### Customer Features
 - QR code table scanning
-- Real-time menu browsing
-- Collaborative ordering (multiple people per table)
-- Order tracking
-- Assistance requests
+- Real-time menu browsing with categories
+- Order placement and tracking
 - Feedback submission
+- Dietary information display
 
 ### Restaurant Admin Features
-- Menu management (CRUD operations)
-- Table management with QR generation
-- Branding customization
-- Order monitoring
-- Sales reports
-- Customer feedback review
-- Table assistance alerts
+- **Restaurant Management**: Profile, branding, business hours
+- **Menu Management**: CRUD operations, categories, pricing, availability
+- **Table Management**: QR code generation, table status tracking
+- **Order Management**: Real-time order monitoring, status updates
+- **Staff Management**: Create and manage chef and customer accounts
+- **Feedback Review**: Customer feedback and ratings
+- **Analytics**: Sales reports and performance metrics
 
 ### Chef Features
 - Real-time order queue
-- Order status updates (Preparing → Ready → Cancelled)
-- Assistance notifications
-- Kitchen dashboard
+- Order status updates (Pending → Preparing → Ready → Delivered)
+- Kitchen dashboard with active orders
 
 ### Master Admin Features
 - Multi-restaurant management
-- Restaurant account creation
-- Pricing plan configuration
+- System-wide user management
 - Global analytics
-- Revenue tracking
-- Subscription management
+
+## Current Implementation Status
+
+### ✅ Fully Implemented
+- **Auth Service**: Complete with JWT authentication, role-based access control, user management
+- **Restaurant Service**: Restaurant CRUD, menu management, table management with QR codes, order processing, feedback system
+- **Frontend**: Complete React application with admin dashboard, menu management, table management, staff management, order tracking
+- **Database Models**: All models implemented with proper relationships
+- **API Endpoints**: RESTful APIs for all operations
+- **Docker Support**: Dockerfiles for all services
+- **Kubernetes**: Complete K8s manifests and deployment scripts
+
+### 🎯 Key Features
+- JWT-based authentication with refresh tokens
+- Role-based access control (MASTER_ADMIN, RESTAURANT_ADMIN, CHEF, CUSTOMER)
+- QR code generation for tables
+- Real-time order status tracking
+- Staff account management (chef and customer creation)
+- Comprehensive menu management with categories and dietary info
+- Table management with status tracking
+- Feedback and ratings system
+- Multi-tenant restaurant support
 
 ## Development Guidelines
 
@@ -172,7 +192,7 @@ Once services are running, access API documentation at:
 pytest services/*/tests/
 
 # Frontend tests
-cd frontend/restaurant-app
+cd frontend
 npm test
 ```
 
@@ -180,12 +200,140 @@ npm test
 Copy `.env.example` to `.env` and configure:
 - Database credentials
 - Redis connection
-- RabbitMQ settings
 - JWT secrets
-- New Relic keys
+- Service ports
+
+## API Endpoints
+
+### Auth Service (Port 8001)
+
+**Authentication:**
+- `POST /api/v1/auth/signup` - User registration
+- `POST /api/v1/auth/login` - User authentication
+- `POST /api/v1/auth/refresh` - Token refresh
+- `POST /api/v1/auth/logout` - User logout
+- `POST /api/v1/auth/change-password` - Password change
+
+**User Management:**
+- `GET /api/v1/users/me` - Get current user
+- `PATCH /api/v1/users/me` - Update current user
+- `PATCH /api/v1/users/me/restaurant` - Update restaurant association
+- `GET /api/v1/users/staff/{restaurant_id}` - List staff members
+- `POST /api/v1/users/chef` - Create chef account
+- `POST /api/v1/users/customer` - Create customer account
+- `PATCH /api/v1/users/{user_id}` - Update staff member
+- `PATCH /api/v1/users/{user_id}/toggle-status` - Toggle user status
+- `DELETE /api/v1/users/chef/{chef_id}` - Delete chef
+- `DELETE /api/v1/users/customer/{customer_id}` - Delete customer
+
+### Restaurant Service (Port 8003)
+
+**Restaurants:**
+- `GET /api/v1/restaurants` - List restaurants
+- `POST /api/v1/restaurants` - Create restaurant
+- `GET /api/v1/restaurants/{id}` - Get restaurant details
+- `PUT /api/v1/restaurants/{id}` - Update restaurant
+- `DELETE /api/v1/restaurants/{id}` - Delete restaurant
+- `PATCH /api/v1/restaurants/{id}/branding` - Update branding
+- `PATCH /api/v1/restaurants/{id}/toggle-status` - Toggle status
+
+**Menu Items:**
+- `GET /api/v1/restaurants/{id}/menu-items` - List menu items
+- `POST /api/v1/restaurants/{id}/menu-items` - Create menu item
+- `GET /api/v1/restaurants/{id}/menu-items/{item_id}` - Get menu item
+- `PUT /api/v1/restaurants/{id}/menu-items/{item_id}` - Update menu item
+- `DELETE /api/v1/restaurants/{id}/menu-items/{item_id}` - Delete menu item
+- `PATCH /api/v1/restaurants/{id}/menu-items/{item_id}/toggle-availability` - Toggle availability
+
+**Tables:**
+- `GET /api/v1/restaurants/{id}/tables` - List tables
+- `POST /api/v1/restaurants/{id}/tables` - Create table with QR code
+- `GET /api/v1/restaurants/{id}/tables/{table_id}` - Get table details
+- `PUT /api/v1/restaurants/{id}/tables/{table_id}` - Update table
+- `DELETE /api/v1/restaurants/{id}/tables/{table_id}` - Delete table
+- `PATCH /api/v1/restaurants/{id}/tables/{table_id}/status` - Update table status
+- `GET /api/v1/restaurants/{id}/tables/{table_id}/qr-code` - Get QR code
+- `POST /api/v1/restaurants/{id}/tables/{table_id}/regenerate-qr` - Regenerate QR code
+
+**Orders:**
+- `GET /api/v1/restaurants/{id}/orders` - List orders
+- `POST /api/v1/orders` - Create order
+- `GET /api/v1/orders/{order_id}` - Get order details
+- `PATCH /api/v1/orders/{order_id}/status` - Update order status
+- `DELETE /api/v1/orders/{order_id}` - Cancel order
+
+**Feedback:**
+- `GET /api/v1/restaurants/{id}/feedback` - List feedback
+- `POST /api/v1/restaurants/{id}/feedback` - Submit feedback
+- `GET /api/v1/restaurants/{id}/feedback/{feedback_id}` - Get feedback
+- `DELETE /api/v1/restaurants/{id}/feedback/{feedback_id}` - Delete feedback
+- `GET /api/v1/restaurants/{id}/feedback/stats/summary` - Feedback summary
+
+## Access Levels
+
+- **MASTER_ADMIN**: Full system access, manage all restaurants
+- **RESTAURANT_ADMIN**: Manage own restaurant, menu, tables, staff, orders
+- **CHEF**: View and update orders for their restaurant
+- **CUSTOMER**: Place orders, provide feedback
+
+## Deployment
+
+### Docker Compose
+```bash
+docker-compose up -d
+```
+
+### Kubernetes
+See detailed guide: [K8S_DEPLOYMENT.md](K8S_DEPLOYMENT.md)
+
+```bash
+# Quick deployment
+export DOCKERHUB_USERNAME=your_username
+./deploy-to-dockerhub.sh
+```
+
+## Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                  FRONTEND (React + Vite)                │
+│                       Port: 3000                         │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+                       │ HTTP/REST
+                       │
+        ┌──────────────┴──────────────┐
+        │                             │
+        ▼                             ▼
+┌──────────────┐              ┌──────────────┐
+│ Auth Service │              │  Restaurant  │
+│   Port 8001  │              │   Service    │
+│              │              │   Port 8003  │
+│ - Auth       │              │ - Restaurants│
+│ - Users      │              │ - Menus      │
+│ - JWT        │              │ - Tables     │
+│ - RBAC       │              │ - Orders     │
+└──────┬───────┘              │ - Feedback   │
+       │                      └──────┬───────┘
+       │                             │
+       └──────────────┬──────────────┘
+                      │
+          ┌───────────┴───────────┐
+          │                       │
+          ▼                       ▼
+    ┌──────────┐            ┌─────────┐
+    │PostgreSQL│            │  Redis  │
+    │  :5432   │            │  :6379  │
+    └──────────┘            └─────────┘
+```
 
 ## License
 MIT
 
 ## Contributors
-- [Your Name]
+- Restaurant Management Team
+
+---
+
+**Last Updated**: 2025-12-06
+**Status**: Production Ready

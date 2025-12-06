@@ -1,0 +1,154 @@
+"""
+API Gateway for Restaurant Management System
+Handles routing, authentication, and rate limiting for all microservices
+"""
+from fastapi import FastAPI, Request, HTTPException, status, Depends
+from fastapi.responses import Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import httpx
+import os
+from typing import Optional
+import time
+from collections import defaultdict
+import asyncio
+
+# Service URLs from environment variables
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service:8001")
+RESTAURANT_SERVICE_URL = os.getenv("RESTAURANT_SERVICE_URL", "http://restaurant-service:8003")
+POS_SERVICE_URL = os.getenv("POS_SERVICE_URL", "http://pos-service:8004")  # Future POS service
+
+# Rate limiting configuration
+RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))
+RATE_LIMIT_WINDOW = int(os.getenv("RATE_LIMIT_WINDOW", "60"))  # seconds
+
+app = FastAPI(
+    title="Restaurant Management API Gateway",
+    description="Unified API Gateway for all restaurant management services",
+    version="1.0.0"
+)
+
+# CORS configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure based on environment
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Rate limiting storage
+rate_limit_storage = defaultdict(list)
+security = HTTPBearer(auto_error=False)
+
+
+# Rate limiting middleware
+async def rate_limit(request: Request):
+    """Simple rate limiting based on IP address"""
+    client_ip = request.client.host
+    current_time = time.time()
+
+    # Clean old requests
+    rate_limit_storage[client_ip] = [
+        req_time for req_time in rate_limit_storage[client_ip]
+        if current_time - req_time < RATE_LIMIT_WINDOW
+    ]
+
+    # Check rate limit
+    if len(rate_limit_storage[client_ip]) >= RATE_LIMIT_REQUESTS:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded. Please try again later."
+        )
+
+    # Add current request
+    rate_limit_storage[client_ip].append(current_time)
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "service": "api-gateway",
+        "timestamp": time.time()
+    }
+
+
+@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+async def gateway(
+    request: Request,
+    path: str,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+):
+    """
+    Main gateway routing function
+    Routes requests to appropriate microservices
+    """
+    # Apply rate limiting
+    await rate_limit(request)
+
+    # Determine target service based on path
+    if path.startswith("api/v1/auth") or path.startswith("api/v1/users"):
+        target_url = f"{AUTH_SERVICE_URL}/{path}"
+    elif path.startswith("api/v1/restaurants") or path.startswith("api/v1/orders"):
+        target_url = f"{RESTAURANT_SERVICE_URL}/{path}"
+    elif path.startswith("api/v1/pos"):  # Future POS service
+        target_url = f"{POS_SERVICE_URL}/{path}"
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Service not found for path: {path}"
+        )
+
+    # Prepare headers
+    headers = dict(request.headers)
+    # Remove host header to avoid conflicts
+    headers.pop("host", None)
+
+    # Add authorization header if credentials provided
+    if credentials:
+        headers["Authorization"] = f"Bearer {credentials.credentials}"
+
+    # Get request body
+    body = await request.body()
+
+    # Forward request to target service
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            response = await client.request(
+                method=request.method,
+                url=target_url,
+                headers=headers,
+                content=body,
+                params=request.query_params
+            )
+
+            # Return response from target service
+            return Response(
+                content=response.content,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.headers.get("content-type")
+            )
+
+        except httpx.ConnectError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Service temporarily unavailable"
+            )
+        except httpx.TimeoutException:
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail="Request timeout"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Gateway error: {str(e)}"
+            )
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

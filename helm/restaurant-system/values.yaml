@@ -1,0 +1,228 @@
+# Default values for restaurant-system
+
+# Global configuration
+global:
+  imageRegistry: docker.io
+  imagePullSecrets: []
+  storageClass: ""
+
+# Namespace
+namespace: restaurant-system
+
+# Image pull policy
+imagePullPolicy: IfNotPresent
+
+# API Gateway
+apiGateway:
+  enabled: true
+  name: api-gateway
+  replicaCount: 2
+  image:
+    repository: yourdockerhub/restaurant-api-gateway
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  env:
+    AUTH_SERVICE_URL: "http://auth-service:8001"
+    RESTAURANT_SERVICE_URL: "http://restaurant-service:8003"
+    POS_SERVICE_URL: "http://pos-service:8004"
+    RATE_LIMIT_REQUESTS: "100"
+    RATE_LIMIT_WINDOW: "60"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# Auth Service
+authService:
+  enabled: true
+  name: auth-service
+  replicaCount: 2
+  image:
+    repository: yourdockerhub/restaurant-auth-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8001
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# Restaurant Service
+restaurantService:
+  enabled: true
+  name: restaurant-service
+  replicaCount: 2
+  image:
+    repository: yourdockerhub/restaurant-restaurant-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8003
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# POS Service (Future)
+posService:
+  enabled: false
+  name: pos-service
+  replicaCount: 2
+  image:
+    repository: yourdockerhub/restaurant-pos-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8004
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# Frontend
+frontend:
+  enabled: true
+  name: frontend
+  replicaCount: 2
+  image:
+    repository: yourdockerhub/restaurant-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+    port: 3000
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# PostgreSQL (using Bitnami chart)
+postgresql:
+  enabled: true
+  auth:
+    username: restaurant_admin
+    password: restaurant_password
+    database: restaurant_db
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+# Redis (using Bitnami chart)
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 5Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: api.restaurant.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: api-gateway
+    - host: restaurant.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls:
+    - secretName: restaurant-tls
+      hosts:
+        - api.restaurant.local
+        - restaurant.local
+
+# Secrets
+secrets:
+  jwtSecretKey: "change-me-in-production"
+  sessionSecret: "change-me-in-production"
+  postgresPassword: "restaurant_password"
+
+# ConfigMap
+config:
+  environment: "production"
+  logLevel: "INFO"
+  jwtAlgorithm: "HS256"
+  accessTokenExpireMinutes: "30"
+  refreshTokenExpireDays: "7"
+
+# Persistence
+persistence:
+  storageClass: ""
+  accessMode: ReadWriteOnce
