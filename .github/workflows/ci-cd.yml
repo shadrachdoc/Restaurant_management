@@ -203,6 +203,8 @@ jobs:
             --set frontend.image.repository=${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend \
             --set frontend.image.tag=${{ github.ref_name }}-${SHORT_SHA} \
             --set posService.enabled=false \
+            --set postgresql.primary.persistence.enabled=false \
+            --set redis.master.persistence.enabled=false \
             --wait \
             --timeout=10m
 
