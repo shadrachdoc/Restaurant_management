@@ -160,33 +160,39 @@ jobs:
 
       - name: Load Docker images into KIND
         run: |
-          # Pull latest images
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-auth-service:${{ github.ref_name }}-${{ github.sha }}
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-restaurant-service:${{ github.ref_name }}-${{ github.sha }}
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-api-gateway:${{ github.ref_name }}-${{ github.sha }}
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ github.ref_name }}-${{ github.sha }}
+          # Use short SHA (7 chars) to match metadata action output
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+
+          # Pull latest images with short SHA tag
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-auth-service:${{ github.ref_name }}-${SHORT_SHA}
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-restaurant-service:${{ github.ref_name }}-${SHORT_SHA}
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-api-gateway:${{ github.ref_name }}-${SHORT_SHA}
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ github.ref_name }}-${SHORT_SHA}
 
           # Load images into KIND
-          kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-auth-service:${{ github.ref_name }}-${{ github.sha }} --name restaurant-cluster
-          kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-restaurant-service:${{ github.ref_name }}-${{ github.sha }} --name restaurant-cluster
-          kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-api-gateway:${{ github.ref_name }}-${{ github.sha }} --name restaurant-cluster
-          kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ github.ref_name }}-${{ github.sha }} --name restaurant-cluster
+          kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-auth-service:${{ github.ref_name }}-${SHORT_SHA} --name restaurant-cluster
+          kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-restaurant-service:${{ github.ref_name }}-${SHORT_SHA} --name restaurant-cluster
+          kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-api-gateway:${{ github.ref_name }}-${SHORT_SHA} --name restaurant-cluster
+          kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ github.ref_name }}-${SHORT_SHA} --name restaurant-cluster
 
       - name: Deploy to Kubernetes using Helm
         run: |
+          # Use short SHA (7 chars) to match metadata action output
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+
           # Deploy or upgrade the Helm chart with dynamic image tags
           helm upgrade --install restaurant-system ./helm/restaurant-system \
             --namespace restaurant-system \
             --create-namespace \
             --set global.imageRegistry=docker.io \
             --set apiGateway.image.repository=${{ secrets.DOCKERHUB_USERNAME }}/restaurant-api-gateway \
-            --set apiGateway.image.tag=${{ github.ref_name }}-${{ github.sha }} \
+            --set apiGateway.image.tag=${{ github.ref_name }}-${SHORT_SHA} \
             --set authService.image.repository=${{ secrets.DOCKERHUB_USERNAME }}/restaurant-auth-service \
-            --set authService.image.tag=${{ github.ref_name }}-${{ github.sha }} \
+            --set authService.image.tag=${{ github.ref_name }}-${SHORT_SHA} \
             --set restaurantService.image.repository=${{ secrets.DOCKERHUB_USERNAME }}/restaurant-restaurant-service \
-            --set restaurantService.image.tag=${{ github.ref_name }}-${{ github.sha }} \
+            --set restaurantService.image.tag=${{ github.ref_name }}-${SHORT_SHA} \
             --set frontend.image.repository=${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend \
-            --set frontend.image.tag=${{ github.ref_name }}-${{ github.sha }} \
+            --set frontend.image.tag=${{ github.ref_name }}-${SHORT_SHA} \
             --set posService.enabled=false \
             --wait \
             --timeout=10m
