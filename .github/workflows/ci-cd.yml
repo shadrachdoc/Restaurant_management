@@ -180,13 +180,17 @@ jobs:
           kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-api-gateway:${{ github.ref_name }}-${SHORT_SHA} --name restaurant-cluster
           kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ github.ref_name }}-${SHORT_SHA} --name restaurant-cluster
 
+      - name: Create namespace
+        run: |
+          # Create namespace for the application
+          kubectl create namespace restaurant-system
+
       - name: Deploy to Kubernetes using Helm
         run: |
           # Use short SHA (7 chars) to match metadata action output
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
 
           # Deploy or upgrade the Helm chart with dynamic image tags
-          # Note: Namespace must be created manually before running this pipeline
           helm upgrade --install restaurant-system ./helm/restaurant-system \
             --namespace restaurant-system \
             --set global.imageRegistry=docker.io \
