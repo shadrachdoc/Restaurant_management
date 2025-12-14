@@ -185,12 +185,16 @@ jobs:
           # Use short SHA (7 chars) to match metadata action output
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
 
-          # Ensure namespace exists (idempotent - safe if already exists)
-          kubectl create namespace restaurant-system --dry-run=client -o yaml | kubectl apply -f -
+          # Clean up any existing namespace from failed deployments
+          kubectl delete namespace restaurant-system --ignore-not-found=true
+
+          # Wait for namespace deletion to complete
+          kubectl wait --for=delete namespace/restaurant-system --timeout=60s || true
 
           # Deploy or upgrade the Helm chart with dynamic image tags
           helm upgrade --install restaurant-system ./helm/restaurant-system \
             --namespace restaurant-system \
+            --create-namespace \
             --set global.imageRegistry=docker.io \
             --set apiGateway.image.repository=${{ secrets.DOCKERHUB_USERNAME }}/restaurant-api-gateway \
             --set apiGateway.image.tag=${{ github.ref_name }}-${SHORT_SHA} \
