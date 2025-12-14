@@ -18,7 +18,7 @@ apiGateway:
   name: api-gateway
   replicaCount: 2
   image:
-    repository: yourdockerhub/restaurant-api-gateway
+    repository: shadrach85/restaurant-api-gateway
     tag: latest
     pullPolicy: IfNotPresent
   service:
@@ -50,7 +50,7 @@ authService:
   name: auth-service
   replicaCount: 2
   image:
-    repository: yourdockerhub/restaurant-auth-service
+    repository: shadrach85/restaurant-auth-service
     tag: latest
     pullPolicy: IfNotPresent
   service:
@@ -76,7 +76,7 @@ restaurantService:
   name: restaurant-service
   replicaCount: 2
   image:
-    repository: yourdockerhub/restaurant-restaurant-service
+    repository: shadrach85/restaurant-restaurant-service
     tag: latest
     pullPolicy: IfNotPresent
   service:
@@ -102,7 +102,7 @@ posService:
   name: pos-service
   replicaCount: 2
   image:
-    repository: yourdockerhub/restaurant-pos-service
+    repository: shadrach85/restaurant-pos-service
     tag: latest
     pullPolicy: IfNotPresent
   service:
@@ -128,7 +128,7 @@ frontend:
   name: frontend
   replicaCount: 2
   image:
-    repository: yourdockerhub/restaurant-frontend
+    repository: shadrach85/restaurant-frontend
     tag: latest
     pullPolicy: IfNotPresent
   service:

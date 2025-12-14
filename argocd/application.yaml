@@ -7,7 +7,7 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/your-org/Restaurant_management.git  # Update with your repo
+    repoURL: https://github.com/shadrachdoc/Restaurant_management.git
     targetRevision: HEAD
     path: helm/restaurant-system
     helm:
