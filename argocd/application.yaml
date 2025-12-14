@@ -9,7 +9,16 @@ spec:
   source:
     repoURL: https://github.com/your-org/Restaurant_management.git  # Update with your repo
     targetRevision: HEAD
-    path: argocd/overlays/production
+    path: helm/restaurant-system
+    helm:
+      releaseName: restaurant-system
+      valueFiles:
+        - values.yaml
+      parameters:
+        - name: global.imageRegistry
+          value: docker.io
+        - name: posService.enabled
+          value: "false"
 
   destination:
     server: https://kubernetes.default.svc
@@ -28,5 +37,8 @@ spec:
         duration: 5s
         factor: 2
         maxDuration: 3m
+    managedNamespaceMetadata:
+      labels:
+        argocd.argoproj.io/instance: restaurant-system
 
   revisionHistoryLimit: 10
