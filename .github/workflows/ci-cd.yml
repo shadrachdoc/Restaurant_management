@@ -158,6 +158,11 @@ jobs:
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm repo update
 
+      - name: Build Helm dependencies
+        run: |
+          cd helm/restaurant-system
+          helm dependency build
+
       - name: Load Docker images into KIND
         run: |
           # Use short SHA (7 chars) to match metadata action output
