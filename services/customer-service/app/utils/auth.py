@@ -50,7 +50,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         "type": "access"
     })
 
-    encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=ALGORITHM)
     return encoded_jwt
 
 
@@ -73,7 +73,7 @@ def create_refresh_token(data: dict) -> str:
         "type": "refresh"
     })
 
-    encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=ALGORITHM)
     return encoded_jwt
 
 
@@ -88,7 +88,7 @@ def decode_token(token: str) -> Optional[dict]:
         Token payload or None if invalid
     """
     try:
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[ALGORITHM])
         return payload
     except JWTError:
         return None

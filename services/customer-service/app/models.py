@@ -24,7 +24,9 @@ class Customer(Base):
     __tablename__ = "customers"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    restaurant_id = Column(UUID, ForeignKey("restaurants.id"), nullable=False, index=True)
+    # Restaurant ID - references Restaurant Service's restaurants table
+    # Note: No FK constraint for microservices boundary (soft reference)
+    restaurant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
 
     # Authentication
     email = Column(String(255), nullable=False, index=True)
@@ -75,8 +77,9 @@ class CustomerSession(Base):
     __tablename__ = "customer_sessions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    customer_id = Column(UUID, ForeignKey("customers.id"), nullable=False, index=True)
-    restaurant_id = Column(UUID, ForeignKey("restaurants.id"), nullable=False, index=True)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True)
+    # Restaurant ID - soft reference (no FK for microservices boundary)
+    restaurant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
 
     # Session info
     session_token = Column(String(500), nullable=False, unique=True)
