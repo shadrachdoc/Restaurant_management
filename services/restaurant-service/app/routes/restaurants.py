@@ -16,6 +16,7 @@ from ..schemas import (
     RestaurantAnalytics,
     MessageResponse
 )
+from ..utils.slug import generate_unique_slug
 from shared.models.enums import UserRole, TableStatus
 from shared.utils.logger import setup_logger
 
@@ -30,10 +31,15 @@ async def create_restaurant(
 ):
     """
     Create a new restaurant (Master Admin only)
+    Automatically generates unique slug for subdomain: pizza-palace.yourapp.com
     """
+    # Generate unique slug from restaurant name
+    slug = restaurant_data.slug or await generate_unique_slug(db, Restaurant, restaurant_data.name)
+
     # Create new restaurant
     new_restaurant = Restaurant(
         name=restaurant_data.name,
+        slug=slug,
         description=restaurant_data.description,
         email=restaurant_data.email,
         phone=restaurant_data.phone,
@@ -49,7 +55,7 @@ async def create_restaurant(
     await db.commit()
     await db.refresh(new_restaurant)
 
-    logger.info(f"Restaurant created: {new_restaurant.name} (ID: {new_restaurant.id})")
+    logger.info(f"Restaurant created: {new_restaurant.name} (Slug: {slug}, ID: {new_restaurant.id})")
 
     return new_restaurant
 
@@ -75,6 +81,32 @@ async def list_restaurants(
     restaurants = result.scalars().all()
 
     return restaurants
+
+
+@router.get("/slug/{slug}", response_model=RestaurantResponse)
+async def get_restaurant_by_slug(
+    slug: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get restaurant by slug (for tenant resolution)
+    Used for subdomain routing: pizza-palace.yourapp.com
+    """
+    result = await db.execute(
+        select(Restaurant).where(
+            Restaurant.slug == slug,
+            Restaurant.is_active == True
+        )
+    )
+    restaurant = result.scalar_one_or_none()
+
+    if not restaurant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Restaurant with slug '{slug}' not found or inactive"
+        )
+
+    return restaurant
 
 
 @router.get("/{restaurant_id}", response_model=RestaurantResponse)
