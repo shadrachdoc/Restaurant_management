@@ -10,6 +10,10 @@ import SignupPage from './pages/Auth/SignupPage';
 import QRScanLanding from './pages/Customer/QRScanLanding';
 import MenuView from './pages/Customer/MenuView';
 import OrderTracking from './pages/Customer/OrderTracking';
+import CustomerLoginPage from './pages/Customer/CustomerLoginPage';
+import RestaurantMenuPage from './pages/Customer/RestaurantMenuPage';
+import CheckoutPage from './pages/Customer/CheckoutPage';
+import OrderTrackingPage from './pages/Customer/OrderTrackingPage';
 
 // Public Pages (No Auth Required)
 import PublicMenu from './pages/Public/PublicMenu';
@@ -94,6 +98,14 @@ function App() {
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+
+        {/* Customer Login/Register */}
+        <Route path="/customer-login" element={<CustomerLoginPage />} />
+
+        {/* Customer Online Ordering Flow */}
+        <Route path="/customer/menu" element={<RestaurantMenuPage />} />
+        <Route path="/customer/checkout" element={<CheckoutPage />} />
+        <Route path="/customer/order-tracking/:orderId" element={<OrderTrackingPage />} />
 
         {/* Public Routes - QR Code Menu (No Auth) */}
         <Route path="/menu/:restaurantId/:tableId" element={<PublicMenu />} />

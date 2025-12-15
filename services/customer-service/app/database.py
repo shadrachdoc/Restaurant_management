@@ -8,7 +8,7 @@ from shared.config.settings import settings
 # Create async engine
 engine = create_async_engine(
     settings.database_url,
-    echo=settings.debug,
+    echo=(settings.environment == "development"),
     pool_pre_ping=True,
     pool_size=10,
     max_overflow=20
