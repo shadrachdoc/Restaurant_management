@@ -17,6 +17,7 @@ class Restaurant(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     name = Column(String(255), nullable=False)
+    slug = Column(String(255), nullable=False, unique=True, index=True)  # For subdomain routing: pizza-palace
     description = Column(Text, nullable=True)
     logo_url = Column(String(500), nullable=True)
     theme_color = Column(String(7), default="#000000")  # Hex color

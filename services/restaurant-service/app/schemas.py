@@ -11,6 +11,7 @@ from shared.models.enums import MenuItemCategory, TableStatus, SubscriptionStatu
 class RestaurantBase(BaseModel):
     """Base restaurant schema"""
     name: str = Field(..., min_length=1, max_length=255)
+    slug: Optional[str] = Field(None, min_length=3, max_length=255, pattern="^[a-z0-9-]+$")
     description: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
@@ -50,6 +51,7 @@ class RestaurantBranding(BaseModel):
 class RestaurantResponse(RestaurantBase):
     """Schema for restaurant response"""
     id: UUID4
+    slug: str
     logo_url: Optional[str] = None
     subscription_status: SubscriptionStatus
     pricing_plan: PricingPlan
