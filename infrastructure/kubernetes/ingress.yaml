@@ -59,28 +59,6 @@ spec:
             port:
               number: 8003
 
-  - host: order.restaurant.local
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: order-service
-            port:
-              number: 8004
-
-  - host: kitchen.restaurant.local
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: kitchen-service
-            port:
-              number: 8005
-
   - host: rabbitmq.restaurant.local
     http:
       paths:
