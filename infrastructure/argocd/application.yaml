@@ -9,8 +9,8 @@ spec:
   project: default
   
   source:
-    repoURL: https://github.com/YOUR_USERNAME/Restaurant_management.git  # UPDATE THIS
-    targetRevision: HEAD
+    repoURL: https://github.com/shadrachdoc/Restaurant_management.git
+    targetRevision: developer  # Using your current branch
     path: infrastructure/kubernetes
     
   destination:
