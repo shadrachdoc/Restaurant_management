@@ -1,21 +1,19 @@
----
+#---
 # PostgreSQL Persistent Volume
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: postgres-pv
-  namespace: restaurant-system
-  labels:
-    type: local
-    app: postgres
-spec:
-  storageClassName: manual
-  capacity:
-    storage: 10Gi
-  accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: "/mnt/data/postgres"
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: postgres-pv
+#   namespace: restaurant-system
+#   labels:
+#     app: postgres
+# spec:
+#   storageClassName: longhorn
+#   capacity:
+#     storage: 10Gi
+#   accessModes:
+#     - ReadWriteOnce
+
 ---
 # PostgreSQL Persistent Volume Claim
 apiVersion: v1
@@ -24,33 +22,29 @@ metadata:
   name: postgres-pvc
   namespace: restaurant-system
 spec:
-  storageClassName: manual
+  storageClassName: longhorn
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 10Gi
-  selector:
-    matchLabels:
-      app: postgres
----
-# Redis Persistent Volume
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: redis-pv
-  namespace: restaurant-system
-  labels:
-    type: local
-    app: redis
-spec:
-  storageClassName: manual
-  capacity:
-    storage: 5Gi
-  accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: "/mnt/data/redis"
+
+# ---
+# # Redis Persistent Volume
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: redis-pv
+#   namespace: restaurant-system
+#   labels:
+#     app: redis
+# spec:
+#   storageClassName: longhorn
+#   capacity:
+#     storage: 5Gi
+#   accessModes:
+#     - ReadWriteOnce
+
 ---
 # Redis Persistent Volume Claim
 apiVersion: v1
@@ -59,33 +53,29 @@ metadata:
   name: redis-pvc
   namespace: restaurant-system
 spec:
-  storageClassName: manual
+  storageClassName: longhorn
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 5Gi
-  selector:
-    matchLabels:
-      app: redis
----
-# RabbitMQ Persistent Volume
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: rabbitmq-pv
-  namespace: restaurant-system
-  labels:
-    type: local
-    app: rabbitmq
-spec:
-  storageClassName: manual
-  capacity:
-    storage: 5Gi
-  accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: "/mnt/data/rabbitmq"
+
+# ---
+# # RabbitMQ Persistent Volume
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: rabbitmq-pv
+#   namespace: restaurant-system
+#   labels:
+#     app: rabbitmq
+# spec:
+#   storageClassName: longhorn
+#   capacity:
+#     storage: 5Gi
+#   accessModes:
+#     - ReadWriteOnce
+
 ---
 # RabbitMQ Persistent Volume Claim
 apiVersion: v1
@@ -94,12 +84,10 @@ metadata:
   name: rabbitmq-pvc
   namespace: restaurant-system
 spec:
-  storageClassName: manual
+  storageClassName: longhorn
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 5Gi
-  selector:
-    matchLabels:
-      app: rabbitmq
+ 

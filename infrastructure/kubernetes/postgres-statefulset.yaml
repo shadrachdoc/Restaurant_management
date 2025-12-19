@@ -84,12 +84,18 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 5
       volumes:
-      - name: postgres-storage
-        persistentVolumeClaim:
-          claimName: postgres-pvc
       - name: init-script
         configMap:
           name: postgres-init-script
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: standard
+      resources:
+        requests:
+          storage: 10Gi
 ---
 apiVersion: v1
 kind: ConfigMap
