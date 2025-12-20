@@ -17,6 +17,15 @@ spec:
         app: restaurant-service
         tier: backend
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - restaurant-cluster-worker2
       containers:
       - name: restaurant-service
         image: restaurant_management_restaurant-service:latest
