@@ -16,7 +16,8 @@ import asyncio
 # Service URLs from environment variables
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service:8001")
 RESTAURANT_SERVICE_URL = os.getenv("RESTAURANT_SERVICE_URL", "http://restaurant-service:8003")
-POS_SERVICE_URL = os.getenv("POS_SERVICE_URL", "http://pos-service:8004")  # Future POS service
+ORDER_SERVICE_URL = os.getenv("ORDER_SERVICE_URL", "http://order-service:8004")
+POS_SERVICE_URL = os.getenv("POS_SERVICE_URL", "http://pos-service:8005")  # Future POS service
 
 # Rate limiting configuration
 RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))
@@ -95,7 +96,10 @@ async def gateway(
     if path.startswith("api/v1/auth") or path.startswith("api/v1/users"):
         target_url = f"{AUTH_SERVICE_URL}/{path}"
         print(f"DEBUG: Routing to AUTH_SERVICE: {target_url}")
-    elif path.startswith("api/v1/restaurants") or path.startswith("api/v1/orders"):
+    elif path.startswith("api/v1/orders") or path.startswith("api/v1/sessions") or path.startswith("api/v1/assistance"):
+        target_url = f"{ORDER_SERVICE_URL}/{path}"
+        print(f"DEBUG: Routing to ORDER_SERVICE: {target_url}")
+    elif path.startswith("api/v1/restaurants"):
         target_url = f"{RESTAURANT_SERVICE_URL}/{path}"
         print(f"DEBUG: Routing to RESTAURANT_SERVICE: {target_url}")
     elif path.startswith("api/v1/pos"):  # Future POS service
