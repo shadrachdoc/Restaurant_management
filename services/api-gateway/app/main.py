@@ -88,14 +88,21 @@ async def gateway(
     # Apply rate limiting
     await rate_limit(request)
 
+    # Debug logging
+    print(f"DEBUG: Received path: '{path}', method: {request.method}")
+
     # Determine target service based on path
     if path.startswith("api/v1/auth") or path.startswith("api/v1/users"):
         target_url = f"{AUTH_SERVICE_URL}/{path}"
+        print(f"DEBUG: Routing to AUTH_SERVICE: {target_url}")
     elif path.startswith("api/v1/restaurants") or path.startswith("api/v1/orders"):
         target_url = f"{RESTAURANT_SERVICE_URL}/{path}"
+        print(f"DEBUG: Routing to RESTAURANT_SERVICE: {target_url}")
     elif path.startswith("api/v1/pos"):  # Future POS service
         target_url = f"{POS_SERVICE_URL}/{path}"
+        print(f"DEBUG: Routing to POS_SERVICE: {target_url}")
     else:
+        print(f"DEBUG: No route match for path: '{path}'")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Service not found for path: {path}"
