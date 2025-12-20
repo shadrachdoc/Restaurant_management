@@ -8,17 +8,17 @@ All accounts have been created and tested successfully. Use these credentials to
 
 ---
 
-## 1. Master Admin Account
+## 1. Admin Account (Primary)
 **Page/Role:** System Administration / Master Admin Dashboard
 
 | Field | Value |
 |-------|-------|
-| **Username** | `masteradmin` |
+| **Username** | `admin` |
 | **Password** | `password` |
-| **Email** | masteradmin@restaurant.com |
+| **Email** | admin@restaurant.com |
 | **Role** | master_admin |
-| **Phone** | +1234567893 |
-| **User ID** | 82671899-f254-488a-95cb-7a253ca56640 |
+| **Phone** | +1234567890 |
+| **User ID** | fbd91e54-a091-4d36-9e3e-db62e05aa5ce |
 
 **Permissions:**
 - Full system access
@@ -78,10 +78,12 @@ All accounts have been created and tested successfully. Use these credentials to
 All accounts tested successfully:
 
 ```bash
-✅ Master Admin Login: master_admin - masteradmin
+✅ Admin Login: master_admin - admin (PRIMARY)
 ✅ Chef Login: chef - adminchef1
 ✅ Restaurant Admin Login: restaurant_admin - adminres
 ```
+
+**Note:** The `admin` account was recreated with the correct password. Old admin account from 2025-12-19 has been removed.
 
 ---
 
