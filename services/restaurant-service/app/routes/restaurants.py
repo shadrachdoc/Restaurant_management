@@ -24,7 +24,7 @@ router = APIRouter()
 logger = setup_logger("restaurant-routes")
 
 
-@router.post("/", response_model=RestaurantResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=RestaurantResponse, status_code=status.HTTP_201_CREATED)
 async def create_restaurant(
     restaurant_data: RestaurantCreate,
     db: AsyncSession = Depends(get_db)
@@ -60,7 +60,7 @@ async def create_restaurant(
     return new_restaurant
 
 
-@router.get("/", response_model=List[RestaurantResponse])
+@router.get("", response_model=List[RestaurantResponse])
 async def list_restaurants(
     skip: int = 0,
     limit: int = 100,
