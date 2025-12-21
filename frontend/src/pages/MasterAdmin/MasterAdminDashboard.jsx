@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUsers, FiDollarSign, FiTrendingUp, FiLogOut } from 'react-icons/fi';
+import { FiUsers, FiDollarSign, FiTrendingUp, FiLogOut, FiPlus, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
 import { restaurantAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
@@ -10,6 +10,18 @@ export default function MasterAdminDashboard() {
   const { user, logout } = useAuthStore();
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingRestaurant, setEditingRestaurant] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    address: '',
+    phone: '',
+    email: '',
+    website: '',
+    theme_color: '#000000',
+    max_tables: 20,
+  });
 
   useEffect(() => {
     fetchRestaurants();
@@ -31,6 +43,76 @@ export default function MasterAdminDashboard() {
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const handleCreate = () => {
+    setEditingRestaurant(null);
+    setFormData({
+      name: '',
+      description: '',
+      address: '',
+      phone: '',
+      email: '',
+      website: '',
+      theme_color: '#000000',
+      max_tables: 20,
+    });
+    setShowModal(true);
+  };
+
+  const handleEdit = (restaurant) => {
+    setEditingRestaurant(restaurant);
+    setFormData({
+      name: restaurant.name || '',
+      description: restaurant.description || '',
+      address: restaurant.address || '',
+      phone: restaurant.phone || '',
+      email: restaurant.email || '',
+      website: restaurant.website || '',
+      theme_color: restaurant.theme_color || '#000000',
+      max_tables: restaurant.max_tables || 20,
+    });
+    setShowModal(true);
+  };
+
+  const handleDelete = async (restaurantId, restaurantName) => {
+    if (!window.confirm(`Are you sure you want to delete "${restaurantName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await restaurantAPI.delete(restaurantId);
+      toast.success('Restaurant deleted successfully!');
+      fetchRestaurants();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete restaurant');
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      if (editingRestaurant) {
+        await restaurantAPI.update(editingRestaurant.id, formData);
+        toast.success('Restaurant updated successfully!');
+      } else {
+        await restaurantAPI.create(formData);
+        toast.success('Restaurant created successfully!');
+      }
+      setShowModal(false);
+      fetchRestaurants();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save restaurant');
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'max_tables' ? parseInt(value) || 0 : value,
+    }));
   };
 
   const stats = [
@@ -97,7 +179,16 @@ export default function MasterAdminDashboard() {
 
         {/* Restaurants List */}
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-2xl font-bold mb-6">All Restaurants</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">All Restaurants</h2>
+            <button
+              onClick={handleCreate}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
+            >
+              <FiPlus />
+              Create Restaurant
+            </button>
+          </div>
 
           {loading ? (
             <div className="flex justify-center py-12">
@@ -119,6 +210,7 @@ export default function MasterAdminDashboard() {
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Tables</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Subscription</th>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -144,6 +236,24 @@ export default function MasterAdminDashboard() {
                           {restaurant.pricing_plan || 'basic'}
                         </span>
                       </td>
+                      <td className="py-3 px-4">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => handleEdit(restaurant)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit Restaurant"
+                          >
+                            <FiEdit2 className="text-lg" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(restaurant.id, restaurant.name)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete Restaurant"
+                          >
+                            <FiTrash2 className="text-lg" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -151,6 +261,159 @@ export default function MasterAdminDashboard() {
             </div>
           )}
         </div>
+
+        {/* Create/Edit Modal */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {editingRestaurant ? 'Edit Restaurant' : 'Create New Restaurant'}
+                </h2>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <FiX className="text-2xl text-gray-600" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Restaurant Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    rows="3"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Address *
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Phone *
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Website
+                  </label>
+                  <input
+                    type="url"
+                    name="website"
+                    value={formData.website}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="https://"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Theme Color
+                    </label>
+                    <input
+                      type="color"
+                      name="theme_color"
+                      value={formData.theme_color}
+                      onChange={handleInputChange}
+                      className="w-full h-10 px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Max Tables *
+                    </label>
+                    <input
+                      type="number"
+                      name="max_tables"
+                      value={formData.max_tables}
+                      onChange={handleInputChange}
+                      min="1"
+                      max="100"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="submit"
+                    className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+                  >
+                    {editingRestaurant ? 'Update Restaurant' : 'Create Restaurant'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
