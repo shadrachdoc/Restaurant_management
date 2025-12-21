@@ -2,95 +2,22 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop, developer ]
+    branches:
+      - main
+      - developer
+      - staging
   pull_request:
-    branches: [ main, develop, developer ]
+    branches:
+      - main
+      - developer
 
 env:
-  REGISTRY: docker.io
-  IMAGE_TAG: ${{ github.sha }}
+  KIND_CLUSTER_NAME: restaurant-cluster
+  NAMESPACE: restaurant-system
 
 jobs:
-  # Build and Test Backend Services
-  test-backend:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [auth-service, restaurant-service, api-gateway]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Cache Python dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-asyncio
-
-      - name: Run tests
-        run: |
-          cd services/${{ matrix.service }}
-          pytest tests/ -v --cov=app --cov-report=xml || true
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./services/${{ matrix.service }}/coverage.xml
-          flags: ${{ matrix.service }}
-          fail_ci_if_error: false
-
-  # Build and Test Frontend
-  test-frontend:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        run: |
-          cd frontend
-          npm ci
-
-      - name: Run linter
-        run: |
-          cd frontend
-          npm run lint || true
-
-      - name: Build frontend
-        run: |
-          cd frontend
-          npm run build
-
-  # Build Docker Images
-  build-images:
-    runs-on: ubuntu-latest
-    needs: [test-backend, test-frontend]
-    if: github.event_name == 'push'
-    strategy:
-      matrix:
-        service: [auth-service, restaurant-service, api-gateway, frontend]
 
     steps:
       - name: Checkout code
@@ -99,194 +26,128 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-${{ matrix.service }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ matrix.service == 'frontend' && './frontend/Dockerfile' || format('./services/{0}/Dockerfile', matrix.service) }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # Deploy to KIND (Local K8s) using Helm
-  deploy-kind:
-    runs-on: ubuntu-latest
-    needs: [build-images]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/developer'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: '3.13.0'
-
-      - name: Set up KIND
-        uses: helm/kind-action@v1.8.0
-        with:
-          cluster_name: restaurant-cluster
-          config: infrastructure/kubernetes/kind-config.yaml
-
-      - name: Verify KIND cluster
+      - name: Install KIND
         run: |
-          kubectl cluster-info
-          kubectl get nodes
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
 
-      - name: Add Bitnami Helm repository
+      - name: Install kubectl
         run: |
-          helm repo add bitnami https://charts.bitnami.com/bitnami
-          helm repo update
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
 
-      - name: Build Helm dependencies
+      - name: Create KIND cluster
         run: |
-          cd helm/restaurant-system
-          helm dependency build
-
-      - name: Load Docker images into KIND
-        run: |
-          # Use short SHA (7 chars) to match metadata action output
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-
-          # Pull latest images with short SHA tag
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-auth-service:${{ github.ref_name }}-${SHORT_SHA}
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-restaurant-service:${{ github.ref_name }}-${SHORT_SHA}
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-api-gateway:${{ github.ref_name }}-${SHORT_SHA}
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ github.ref_name }}-${SHORT_SHA}
-
-          # Load images into KIND
-          kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-auth-service:${{ github.ref_name }}-${SHORT_SHA} --name restaurant-cluster
-          kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-restaurant-service:${{ github.ref_name }}-${SHORT_SHA} --name restaurant-cluster
-          kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-api-gateway:${{ github.ref_name }}-${SHORT_SHA} --name restaurant-cluster
-          kind load docker-image ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ github.ref_name }}-${SHORT_SHA} --name restaurant-cluster
+          if ! kind get clusters | grep -q "^${KIND_CLUSTER_NAME}$"; then
+            kind create cluster --name ${KIND_CLUSTER_NAME} --config infrastructure/kubernetes/kind-config.yaml
+          fi
 
       - name: Create namespace
         run: |
-          # Create namespace for the application
-          kubectl create namespace restaurant-system
+          kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Deploy to Kubernetes using Helm
+      - name: Build Frontend Image
         run: |
-          # Use short SHA (7 chars) to match metadata action output
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          docker build -f frontend/Dockerfile -t restaurant-frontend:latest .
+          docker tag restaurant-frontend:latest frontend:latest
 
-          # Deploy or upgrade the Helm chart with dynamic image tags
-          helm upgrade --install restaurant-system ./helm/restaurant-system \
-            --namespace restaurant-system \
-            --set global.imageRegistry=docker.io \
-            --set apiGateway.image.repository=${{ secrets.DOCKERHUB_USERNAME }}/restaurant-api-gateway \
-            --set apiGateway.image.tag=${{ github.ref_name }}-${SHORT_SHA} \
-            --set authService.image.repository=${{ secrets.DOCKERHUB_USERNAME }}/restaurant-auth-service \
-            --set authService.image.tag=${{ github.ref_name }}-${SHORT_SHA} \
-            --set restaurantService.image.repository=${{ secrets.DOCKERHUB_USERNAME }}/restaurant-restaurant-service \
-            --set restaurantService.image.tag=${{ github.ref_name }}-${SHORT_SHA} \
-            --set frontend.image.repository=${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend \
-            --set frontend.image.tag=${{ github.ref_name }}-${SHORT_SHA} \
-            --set posService.enabled=false \
-            --set postgresql.primary.persistence.enabled=false \
-            --set redis.master.persistence.enabled=false \
-            --wait \
-            --timeout=10m
-
-      - name: Wait for deployments
+      - name: Build API Gateway Image
         run: |
-          # Wait for all deployments to be ready
-          kubectl wait --for=condition=ready pod -l app=api-gateway -n restaurant-system --timeout=300s || true
-          kubectl wait --for=condition=ready pod -l app=auth-service -n restaurant-system --timeout=300s || true
-          kubectl wait --for=condition=ready pod -l app=restaurant-service -n restaurant-system --timeout=300s || true
-          kubectl wait --for=condition=ready pod -l app=frontend -n restaurant-system --timeout=300s || true
+          docker build -f services/api-gateway/Dockerfile -t api-gateway:latest .
 
-      - name: Verify deployment
+      - name: Build Auth Service Image
         run: |
-          echo "==== Pods Status ===="
-          kubectl get pods -n restaurant-system
+          docker build -f services/auth-service/Dockerfile -t auth-service:latest .
 
-          echo "==== Services Status ===="
-          kubectl get services -n restaurant-system
-
-          echo "==== Deployment Status ===="
-          kubectl get deployments -n restaurant-system
-
-      - name: Run smoke tests
+      - name: Build Restaurant Service Image
         run: |
-          # Port forward to test services
-          kubectl port-forward -n restaurant-system service/api-gateway 8000:8000 &
+          docker build -f services/restaurant-service/Dockerfile -t restaurant-service:latest .
+
+      - name: Build Order Service Image
+        run: |
+          docker build -f services/order-service/Dockerfile -t order-service:latest .
+
+      - name: Load Images into KIND
+        run: |
+          kind load docker-image restaurant-frontend:latest --name ${KIND_CLUSTER_NAME}
+          kind load docker-image api-gateway:latest --name ${KIND_CLUSTER_NAME}
+          kind load docker-image auth-service:latest --name ${KIND_CLUSTER_NAME}
+          kind load docker-image restaurant-service:latest --name ${KIND_CLUSTER_NAME}
+          kind load docker-image order-service:latest --name ${KIND_CLUSTER_NAME}
+
+      - name: Deploy Database (PostgreSQL)
+        run: |
+          kubectl apply -f infrastructure/kubernetes/postgres-deployment.yaml -n ${NAMESPACE}
+          kubectl wait --for=condition=ready pod -l app=postgres -n ${NAMESPACE} --timeout=300s
+
+      - name: Deploy Redis
+        run: |
+          kubectl apply -f infrastructure/kubernetes/redis-deployment.yaml -n ${NAMESPACE}
+
+      - name: Deploy RabbitMQ
+        run: |
+          kubectl apply -f infrastructure/kubernetes/rabbitmq-deployment.yaml -n ${NAMESPACE}
+
+      - name: Deploy Auth Service
+        run: |
+          kubectl apply -f infrastructure/kubernetes/auth-service-deployment.yaml -n ${NAMESPACE}
+          kubectl rollout status deployment/auth-service -n ${NAMESPACE} --timeout=300s
+
+      - name: Deploy Restaurant Service
+        run: |
+          kubectl apply -f infrastructure/kubernetes/restaurant-service-deployment.yaml -n ${NAMESPACE}
+          kubectl rollout status deployment/restaurant-service -n ${NAMESPACE} --timeout=300s
+
+      - name: Deploy Order Service
+        run: |
+          kubectl apply -f infrastructure/kubernetes/order-service-deployment.yaml -n ${NAMESPACE}
+          kubectl rollout status deployment/order-service -n ${NAMESPACE} --timeout=300s
+
+      - name: Deploy API Gateway
+        run: |
+          kubectl apply -f infrastructure/kubernetes/api-gateway-deployment.yaml -n ${NAMESPACE}
+          kubectl rollout status deployment/api-gateway -n ${NAMESPACE} --timeout=300s
+
+      - name: Deploy Frontend
+        run: |
+          kubectl apply -f infrastructure/kubernetes/frontend-deployment.yaml -n ${NAMESPACE}
+          kubectl rollout status deployment/frontend -n ${NAMESPACE} --timeout=300s
+
+      - name: Deploy Ingress
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+          kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=300s
+          kubectl apply -f infrastructure/kubernetes/ingress.yaml -n ${NAMESPACE}
+
+      - name: Verify Deployments
+        run: |
+          echo "=== Pods Status ==="
+          kubectl get pods -n ${NAMESPACE}
+          echo ""
+          echo "=== Services Status ==="
+          kubectl get svc -n ${NAMESPACE}
+          echo ""
+          echo "=== Ingress Status ==="
+          kubectl get ingress -n ${NAMESPACE}
+
+      - name: Run Health Checks
+        run: |
+          echo "Waiting for services to be ready..."
+          sleep 30
+          kubectl port-forward svc/auth-service -n ${NAMESPACE} 8002:8001 &
+          kubectl port-forward svc/restaurant-service -n ${NAMESPACE} 8003:8003 &
+          kubectl port-forward svc/order-service -n ${NAMESPACE} 8004:8004 &
           sleep 10
+          curl -f http://localhost:8002/health || exit 1
+          curl -f http://localhost:8003/health || exit 1
+          curl -f http://localhost:8004/health || exit 1
+          echo "All health checks passed!"
 
-          # Test health endpoint
-          curl -f http://localhost:8000/health || exit 1
-
-          echo "Smoke tests passed!"
-
-      - name: Save deployment artifacts
-        if: always()
+      - name: Cleanup (on failure)
+        if: failure()
         run: |
-          kubectl get all -n restaurant-system > deployment-status.txt
-          kubectl logs -n restaurant-system -l app=api-gateway --tail=100 > api-gateway-logs.txt || true
-          kubectl logs -n restaurant-system -l app=auth-service --tail=100 > auth-service-logs.txt || true
-
-      - name: Upload deployment logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: deployment-logs
-          path: |
-            deployment-status.txt
-            *-logs.txt
-
-  # Update ArgoCD Helm values (for production clusters)
-  update-argocd:
-    runs-on: ubuntu-latest
-    needs: [build-images]
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update Helm values for ArgoCD
-        run: |
-          # Update image tags in Helm values file
-          sed -i "s|tag: latest|tag: main-${{ github.sha }}|g" helm/restaurant-system/values.yaml
-
-      - name: Commit and push Helm values changes
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git add helm/restaurant-system/values.yaml
-          git commit -m "Update Helm values with image tags: ${{ github.sha }}" || echo "No changes to commit"
-          git push || echo "Nothing to push"
-
-      - name: Notify ArgoCD to sync
-        if: env.ARGOCD_SERVER != ''
-        env:
-          ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
-          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
-        run: |
-          # Trigger ArgoCD sync
-          curl -X POST "$ARGOCD_SERVER/api/v1/applications/restaurant-system/sync" \
-            -H "Authorization: Bearer $ARGOCD_AUTH_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"prune": false, "dryRun": false}'
+          kubectl logs -l app=auth-service -n ${NAMESPACE} --tail=50 || true
+          kubectl logs -l app=restaurant-service -n ${NAMESPACE} --tail=50 || true
+          kubectl logs -l app=order-service -n ${NAMESPACE} --tail=50 || true
