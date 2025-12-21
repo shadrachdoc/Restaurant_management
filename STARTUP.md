@@ -50,7 +50,7 @@ kubectl port-forward svc/postgres-service -n restaurant-system 5432:5432
 
 ### **7. ArgoCD**
 ```bash
-kubectl port-forward svc/argocd-server -n argocd 8080:443
+kubectl port-forward svc/argocd-server -n argocd 8081:443
 ```
 
 ### **All-in-One Port Forward Script**
@@ -61,7 +61,7 @@ kubectl port-forward svc/api-gateway -n restaurant-system 8001:8000 &
 kubectl port-forward svc/auth-service -n restaurant-system 8001:8001 &
 kubectl port-forward svc/restaurant-service -n restaurant-system 8003:8003 &
 kubectl port-forward svc/order-service -n restaurant-system 8004:8004 &
-kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+kubectl port-forward svc/argocd-server -n argocd 8081:443 &
 
 echo "All port forwards started!"
 echo "Use 'pkill -f port-forward' to stop all port forwards"
@@ -95,8 +95,9 @@ http://localhost:3000/menu/4bbfc1c9-670d-4899-afc9-44795055c27c/fe4547dd-7d99-4b
 
 ### **ArgoCD Dashboard**
 ```
-http://localhost:8080
+https://localhost:8081
 ```
+*Note: Use HTTPS and accept the self-signed certificate*
 
 ---
 
@@ -134,10 +135,10 @@ Dashboard: http://localhost:3000/kitchen
 ### **ArgoCD**
 ```
 Username: admin
-Password: (Get with command below)
+Password: myq45CaeIZQNPgkA
 ```
 
-**Get ArgoCD Password:**
+**Get ArgoCD Password (if needed):**
 ```bash
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d && echo
 ```
@@ -178,7 +179,7 @@ Auth Service:          http://localhost:8001
 Restaurant Service:    http://localhost:8003
 Order Service:         http://localhost:8004
 PostgreSQL:            postgresql://localhost:5432
-ArgoCD:                http://localhost:8080
+ArgoCD:                https://localhost:8081
 ```
 
 ---
@@ -625,11 +626,13 @@ open http://localhost:3000
 
 ## 📝 Notes
 
-- All services are running on **worker2** node due to DNS issues on worker node
+- Database-dependent services run on **worker** node (worker2 has DNS issues)
+- Frontend can run on any node (no database dependency)
 - Database password: `restaurant_pass_2024`
 - JWT secrets are placeholders - change in production
 - Order service is PUBLIC - no authentication required for customers
 - Session tokens expire after 4 hours
+- ArgoCD uses port 8081 (port 8080 used by Ingress)
 
 ---
 

@@ -25,7 +25,7 @@ spec:
               - key: kubernetes.io/hostname
                 operator: In
                 values:
-                - restaurant-cluster-worker2
+                - restaurant-cluster-worker
       containers:
       - name: order-service
         image: order-service:latest
