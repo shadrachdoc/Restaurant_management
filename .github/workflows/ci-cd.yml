@@ -6,6 +6,7 @@ on:
       - main
       - developer
       - staging
+  workflow_dispatch:  # Allow manual triggering from GitHub UI
 
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
