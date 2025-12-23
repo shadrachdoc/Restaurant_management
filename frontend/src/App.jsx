@@ -109,6 +109,7 @@ function App() {
 
         {/* Public Routes - QR Code Menu (No Auth) */}
         <Route path="/menu/:restaurantId/:tableId" element={<PublicMenu />} />
+        <Route path="/table/:restaurantId/:tableId" element={<PublicMenu />} />
 
         {/* Customer Routes - QR Code Flow */}
         <Route path="/table/:tableId" element={<QRScanLanding />} />

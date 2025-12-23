@@ -40,8 +40,15 @@ const addInterceptors = (instance) => {
     async (error) => {
       const originalRequest = error.config;
 
-      // If token expired, try to refresh
-      if (error.response?.status === 401 && !originalRequest._retry) {
+      // Check if this is a public route (no auth required)
+      const publicRoutes = [
+        '/api/v1/restaurants/',
+        '/api/v1/orders'
+      ];
+      const isPublicRoute = publicRoutes.some(route => originalRequest.url?.includes(route));
+
+      // If token expired, try to refresh (but not for public routes)
+      if (error.response?.status === 401 && !originalRequest._retry && !isPublicRoute) {
         originalRequest._retry = true;
 
         try {

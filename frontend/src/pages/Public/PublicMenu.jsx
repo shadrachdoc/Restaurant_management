@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FiShoppingCart, FiPlus, FiMinus, FiX, FiCheck } from 'react-icons/fi';
+import { FiShoppingCart, FiPlus, FiMinus, FiX, FiCheck, FiUser, FiLogIn } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { restaurantAPI, menuAPI, orderAPI } from '../../services/api';
+import useAuthStore from '../../store/authStore';
 
 export default function PublicMenu() {
   const { restaurantId, tableId } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuthStore();
 
   const [restaurant, setRestaurant] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
@@ -163,11 +165,41 @@ export default function PublicMenu() {
       {/* Header */}
       <div className="bg-white shadow-md sticky top-0 z-40">
         <div className="max-w-4xl mx-auto p-6">
-          <h1 className="text-3xl font-bold text-gray-900">{restaurant?.name || 'Menu'}</h1>
-          <p className="text-gray-600 mt-1">{restaurant?.description}</p>
-          {tableId && (
-            <p className="text-sm text-gray-500 mt-2">Table: {tableId.substring(0, 8)}</p>
-          )}
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-gray-900">{restaurant?.name || 'Menu'}</h1>
+              <p className="text-gray-600 mt-1">{restaurant?.description}</p>
+              {tableId && (
+                <p className="text-sm text-gray-500 mt-2">Table: {tableId.substring(0, 8)}</p>
+              )}
+            </div>
+
+            {/* Optional Login/Signup Buttons */}
+            {!isAuthenticated && (
+              <div className="flex gap-2 ml-4">
+                <button
+                  onClick={() => navigate('/customer-login')}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  <FiLogIn /> Login
+                </button>
+                <button
+                  onClick={() => navigate('/signup')}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
+                >
+                  <FiUser /> Sign Up
+                </button>
+              </div>
+            )}
+
+            {/* Logged in user info */}
+            {isAuthenticated && (
+              <div className="flex items-center gap-2 ml-4 px-4 py-2 bg-green-50 rounded-lg">
+                <FiUser className="text-green-600" />
+                <span className="text-sm font-semibold text-green-900">{user?.full_name || user?.username}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
