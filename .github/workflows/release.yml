@@ -1,0 +1,217 @@
+name: Release and Deploy
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on tags like v1.0.0, v1.2.3, etc.
+
+env:
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Allow creating releases and pushing commits
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # Fetch all history for changelog generation
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          # Extract version from tag (e.g., refs/tags/v1.2.3 -> v1.2.3)
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_number=${VERSION#v}" >> $GITHUB_OUTPUT
+          echo "📦 Release version: $VERSION"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ steps.version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ github.sha }}
+
+      - name: Build and Push API Gateway
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/api-gateway/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:${{ steps.version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:${{ github.sha }}
+
+      - name: Build and Push Auth Service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/auth-service/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:${{ steps.version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:${{ github.sha }}
+
+      - name: Build and Push Restaurant Service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/restaurant-service/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:${{ steps.version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:${{ github.sha }}
+
+      - name: Build and Push Order Service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/order-service/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/order-service:${{ steps.version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/order-service:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/order-service:${{ github.sha }}
+
+      - name: Update Deployment Manifests with Release Version
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          echo "Updating deployment manifests to use version: $VERSION"
+
+          # Update all deployment files with version tag
+          sed -i "s|image: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:$VERSION|g" infrastructure/kubernetes/frontend-deployment.yaml
+          sed -i "s|image: ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:$VERSION|g" infrastructure/kubernetes/api-gateway-deployment.yaml
+          sed -i "s|image: ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:$VERSION|g" infrastructure/kubernetes/auth-service-deployment.yaml
+          sed -i "s|image: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:$VERSION|g" infrastructure/kubernetes/restaurant-service-deployment.yaml
+          sed -i "s|image: ${{ secrets.DOCKERHUB_USERNAME }}/order-service:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/order-service:$VERSION|g" infrastructure/kubernetes/order-service-deployment.yaml
+
+          # Change imagePullPolicy to IfNotPresent for versioned releases
+          sed -i "s|imagePullPolicy: Always|imagePullPolicy: IfNotPresent|g" infrastructure/kubernetes/frontend-deployment.yaml
+          sed -i "s|imagePullPolicy: Always|imagePullPolicy: IfNotPresent|g" infrastructure/kubernetes/api-gateway-deployment.yaml
+          sed -i "s|imagePullPolicy: Always|imagePullPolicy: IfNotPresent|g" infrastructure/kubernetes/auth-service-deployment.yaml
+          sed -i "s|imagePullPolicy: Always|imagePullPolicy: IfNotPresent|g" infrastructure/kubernetes/restaurant-service-deployment.yaml
+          sed -i "s|imagePullPolicy: Always|imagePullPolicy: IfNotPresent|g" infrastructure/kubernetes/order-service-deployment.yaml
+
+          echo "✅ Deployment manifests updated to version $VERSION"
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "## First Release" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "This is the first release of the Restaurant Management System." >> CHANGELOG.md
+          else
+            echo "## Changes since $PREV_TAG" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+
+            # Features
+            FEATURES=$(git log $PREV_TAG..HEAD --pretty=format:"- %s (%h)" --grep="feat:" --grep="feature:" -i)
+            if [ ! -z "$FEATURES" ]; then
+              echo "### ✨ Features" >> CHANGELOG.md
+              echo "$FEATURES" >> CHANGELOG.md
+              echo "" >> CHANGELOG.md
+            fi
+
+            # Bug Fixes
+            FIXES=$(git log $PREV_TAG..HEAD --pretty=format:"- %s (%h)" --grep="fix:" --grep="bug:" -i)
+            if [ ! -z "$FIXES" ]; then
+              echo "### 🐛 Bug Fixes" >> CHANGELOG.md
+              echo "$FIXES" >> CHANGELOG.md
+              echo "" >> CHANGELOG.md
+            fi
+
+            # Documentation
+            DOCS=$(git log $PREV_TAG..HEAD --pretty=format:"- %s (%h)" --grep="docs:" --grep="documentation:" -i)
+            if [ ! -z "$DOCS" ]; then
+              echo "### 📚 Documentation" >> CHANGELOG.md
+              echo "$DOCS" >> CHANGELOG.md
+              echo "" >> CHANGELOG.md
+            fi
+
+            # All commits if no categorized commits found
+            if [ -z "$FEATURES" ] && [ -z "$FIXES" ] && [ -z "$DOCS" ]; then
+              echo "### 📝 All Changes" >> CHANGELOG.md
+              git log $PREV_TAG..HEAD --pretty=format:"- %s (%h)" >> CHANGELOG.md
+              echo "" >> CHANGELOG.md
+            fi
+          fi
+
+          # Add Docker images section
+          echo "" >> CHANGELOG.md
+          echo "### 🐳 Docker Images" >> CHANGELOG.md
+          echo "All images are available on DockerHub with the following tags:" >> CHANGELOG.md
+          echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ steps.version.outputs.version }}\`" >> CHANGELOG.md
+          echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:${{ steps.version.outputs.version }}\`" >> CHANGELOG.md
+          echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/auth-service:${{ steps.version.outputs.version }}\`" >> CHANGELOG.md
+          echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:${{ steps.version.outputs.version }}\`" >> CHANGELOG.md
+          echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/order-service:${{ steps.version.outputs.version }}\`" >> CHANGELOG.md
+
+          cat CHANGELOG.md
+
+      - name: Commit Deployment Updates
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+
+          git add infrastructure/kubernetes/*.yaml
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Release ${{ steps.version.outputs.version }}: Update deployments [skip ci]"
+            git push origin HEAD:main
+          fi
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          release_name: Release ${{ steps.version.outputs.version }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: false
+
+      - name: Release Summary
+        run: |
+          echo "========================================="
+          echo "🎉 Release ${{ steps.version.outputs.version }} Complete!"
+          echo "========================================="
+          echo ""
+          echo "📦 Docker Images Published:"
+          echo "  ✓ restaurant-frontend:${{ steps.version.outputs.version }}"
+          echo "  ✓ api-gateway:${{ steps.version.outputs.version }}"
+          echo "  ✓ auth-service:${{ steps.version.outputs.version }}"
+          echo "  ✓ restaurant-service:${{ steps.version.outputs.version }}"
+          echo "  ✓ order-service:${{ steps.version.outputs.version }}"
+          echo ""
+          echo "📝 GitHub Release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.version }}"
+          echo ""
+          echo "🚀 Deployment manifests updated and committed to main branch"
+          echo "ArgoCD will automatically detect and deploy this version"
