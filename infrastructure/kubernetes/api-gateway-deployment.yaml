@@ -76,7 +76,7 @@ metadata:
   labels:
     app: api-gateway
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
     - port: 8000
       targetPort: 8000

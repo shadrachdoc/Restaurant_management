@@ -39,3 +39,7 @@ spec:
       kind: Deployment
       jsonPointers:
         - /spec/replicas
+    - group: networking.k8s.io
+      kind: Ingress
+      jsonPointers:
+        - /status/loadBalancer

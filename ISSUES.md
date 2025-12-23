@@ -23,6 +23,20 @@ All known issues have been resolved. System is running smoothly.
 
 ## Resolved Issues
 
+### Quick Reference
+
+| # | Issue | Root Cause | Solution | Date |
+|---|-------|------------|----------|------|
+| 1 | [DNS Resolution Failures](#1-dns-resolution-failures-in-kind-cluster--resolved) | Worker node has intermittent DNS issues | Node affinity to worker2 | 2025-12-23 |
+| 2 | [Master Admin CRUD Missing](#2-master-admin-dashboard-missing-crud-controls--resolved) | Frontend component lacked controls | Added CRUD buttons & modals | 2025-12-23 |
+| 3 | [ArgoCD Pods Failing](#3-argocd-pods-failing-to-start--resolved) | Worker node can't reach K8s API | Removed node affinity | 2025-12-23 |
+| 4 | [Ingress Not Accessible](#4-ingress-not-accessible-in-browser--resolved) | Missing /etc/hosts entries | Added host entries | 2025-12-23 |
+| 5 | [CI/CD Pipeline Complex](#5-cicd-pipeline-too-complex--resolved) | Too many cluster management steps | Simplified to build + ArgoCD | 2025-12-23 |
+| 6 | [RabbitMQ Restarting](#6-rabbitmq-pod-constantly-restarting--resolved) | Probes timeout before startup | Increased probe delays | 2025-12-23 |
+| 7 | [Localhost Not Working](#7-frontend-not-accessible-via-localhost-kind-cluster--resolved) | Ingress on wrong node | hostNetwork + control-plane affinity + toleration | 2025-12-23 |
+
+---
+
 ### 1. DNS Resolution Failures in KIND Cluster ✅ RESOLVED
 
 **Date**: 2025-12-23
@@ -576,6 +590,364 @@ spec:
   - key: dns-broken
     operator: Exists
     effect: NoSchedule
+```
+
+---
+
+### 6. RabbitMQ Pod Constantly Restarting ✅ RESOLVED
+
+**Date**: 2025-12-23
+**Status**: Fixed
+**Severity**: High
+
+#### Problem
+RabbitMQ pod was stuck in CrashLoopBackOff with 15+ restarts. Pod status showed 0/1 ready.
+
+**Symptoms**:
+```
+NAME         READY   STATUS             RESTARTS   AGE
+rabbitmq-0   0/1     CrashLoopBackOff   16         7h
+```
+
+**Error Messages**:
+- Liveness probe failed: timeout after 10s
+- Readiness probe failed: timeout after 10s
+
+#### Root Cause Analysis
+
+**Investigation**:
+1. Checked RabbitMQ logs and found it takes ~80 seconds to fully initialize
+2. Probe configuration had `initialDelaySeconds: 30s` and `timeoutSeconds: 10s`
+3. Probes were timing out before RabbitMQ finished starting up
+4. Pod was being killed and restarted before it could become ready
+
+**Timeline**:
+- 0-30s: RabbitMQ starting up
+- 30s: Readiness probe starts checking
+- 40s: Probe times out (30s + 10s timeout)
+- Pod marked as failed and restarted
+- Never reaches 80s when RabbitMQ would be ready
+
+#### Solution
+
+Updated [infrastructure/kubernetes/rabbitmq-statefulset.yaml](infrastructure/kubernetes/rabbitmq-statefulset.yaml) with increased probe timings:
+
+```yaml
+livenessProbe:
+  exec:
+    command:
+    - rabbitmq-diagnostics
+    - ping
+  initialDelaySeconds: 90  # Increased from 60s
+  periodSeconds: 30
+  timeoutSeconds: 20       # Increased from 10s
+  failureThreshold: 6      # Added
+
+readinessProbe:
+  exec:
+    command:
+    - rabbitmq-diagnostics
+    - ping
+  initialDelaySeconds: 90  # Increased from 30s
+  periodSeconds: 15
+  timeoutSeconds: 20       # Increased from 10s
+  failureThreshold: 3      # Added
+```
+
+**Key Changes**:
+- `initialDelaySeconds`: 30s → 90s (gives RabbitMQ time to start)
+- `timeoutSeconds`: 10s → 20s (allows probe command more time)
+- Added `failureThreshold`: Allows multiple failures before restart
+
+#### Results
+
+**Before Fix**:
+```
+NAME         READY   STATUS             RESTARTS
+rabbitmq-0   0/1     CrashLoopBackOff   16
+```
+
+**After Fix**:
+```
+NAME         READY   STATUS    RESTARTS
+rabbitmq-0   1/1     Running   0
+```
+
+RabbitMQ now starts cleanly and stays healthy without any restarts.
+
+---
+
+### 7. Frontend Not Accessible via Localhost (KIND Cluster) ✅ RESOLVED
+
+**Date**: 2025-12-23
+**Status**: Fixed
+**Severity**: High
+
+#### Problem
+Frontend application was not accessible via `http://localhost/` despite all pods running. User received connection errors in browser.
+
+**Symptoms**:
+- Browser: `ERR_CONNECTION_REFUSED` or `404 Not Found nginx`
+- Port-forward worked: `kubectl port-forward svc/frontend 9090:80`
+- All pods healthy and running (1/1)
+- ArgoCD showing Synced status
+
+#### Root Cause Analysis
+
+**Investigation Timeline**:
+
+1. **Initial Check**: Verified all pods were running
+   ```bash
+   kubectl get pods -n restaurant-system
+   # All pods showing 1/1 Running
+   ```
+
+2. **Ingress Controller Investigation**:
+   - Found ingress-nginx-controller running on `restaurant-cluster-worker` node
+   - KIND cluster port mapping (0.0.0.0:80→80/tcp) configured on `control-plane` node
+   - **Mismatch**: Traffic to localhost:80 goes to control-plane, but ingress was on worker
+
+3. **Attempted Solutions**:
+
+   **Attempt 1: Changed Service Type to NodePort**
+   ```bash
+   kubectl patch svc ingress-nginx-controller -n ingress-nginx -p '{"spec":{"type":"NodePort"}}'
+   ```
+   - Result: NodePort assigned (30986) but still not accessible via localhost:80
+   - Issue: NodePort doesn't match KIND port mapping expectations
+
+   **Attempt 2: Tried Direct NodePort Access**
+   ```bash
+   curl http://localhost:30986/
+   ```
+   - Result: Connection refused
+   - Issue: NodePort on worker node not mapped in KIND
+
+   **Attempt 3: Enabled hostNetwork on Worker Node**
+   ```bash
+   kubectl patch deployment ingress-nginx-controller -n ingress-nginx \
+     --type=json -p='[{"op": "add", "path": "/spec/template/spec/hostNetwork", "value": true}]'
+   ```
+   - Result: Ingress bound to worker node IP (172.18.0.2)
+   - Direct connection worked: `curl -H "Host: restaurant.local" http://172.18.0.2/` → 200
+   - Issue: localhost:80 still not working (port mapping on different node)
+
+   **Attempt 4: Move to Control-Plane with Node Affinity**
+   ```bash
+   kubectl patch deployment ingress-nginx-controller -n ingress-nginx \
+     --type=json -p='[{"op": "replace", "path": "/spec/template/spec/affinity/..."}]'
+   ```
+   - Result: Pod stayed Pending
+   - Error: `0/3 nodes available: 1 node(s) had untolerated taint {node-role.kubernetes.io/control-plane}`
+   - Issue: Control-plane has taint preventing pod scheduling
+
+#### Final Solution
+
+Added both node affinity to target control-plane AND toleration for the control-plane taint:
+
+```bash
+kubectl patch deployment ingress-nginx-controller -n ingress-nginx --type=json -p='[
+  {
+    "op": "replace",
+    "path": "/spec/template/spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/0/matchExpressions/0/values/0",
+    "value": "restaurant-cluster-control-plane"
+  },
+  {
+    "op": "add",
+    "path": "/spec/template/spec/tolerations",
+    "value": [
+      {
+        "key": "node-role.kubernetes.io/control-plane",
+        "operator": "Exists",
+        "effect": "NoSchedule"
+      }
+    ]
+  }
+]'
+```
+
+**Configuration Applied**:
+```yaml
+spec:
+  template:
+    spec:
+      hostNetwork: true  # Bind directly to node's port 80
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - restaurant-cluster-control-plane  # Schedule on control-plane
+      tolerations:  # Allow scheduling on control-plane despite taint
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+```
+
+#### Why This Works
+
+**KIND Cluster Architecture**:
+```
+Host Machine (localhost)
+  ↓ Docker port mapping (0.0.0.0:80 → 80/tcp)
+Control-Plane Container (172.18.0.3)
+  ↓ hostNetwork: true
+Ingress Controller Pod (binds to node's port 80)
+  ↓ Ingress routing
+Application Pods (frontend, services)
+```
+
+**Key Components**:
+1. **hostNetwork: true**: Ingress controller binds directly to node's port 80 (not ClusterIP)
+2. **Node Affinity**: Ensures pod runs on control-plane node
+3. **Toleration**: Allows scheduling on control-plane despite NoSchedule taint
+4. **KIND Port Mapping**: localhost:80 → control-plane:80
+5. **Result**: localhost:80 → control-plane:80 → ingress-nginx → frontend
+
+#### Verification Steps
+
+1. **Check Ingress Pod Location**:
+   ```bash
+   kubectl get pods -n ingress-nginx -o wide
+   ```
+   Output:
+   ```
+   NAME                                        READY   STATUS    NODE
+   ingress-nginx-controller-875b9684b-sxb84    1/1     Running   restaurant-cluster-control-plane
+   ```
+
+2. **Verify hostNetwork IP**:
+   Pod IP matches control-plane node IP (172.18.0.3)
+
+3. **Test Localhost Access**:
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}" -H "Host: restaurant.local" http://localhost/
+   # Output: 200
+   ```
+
+4. **Test in Browser**:
+   - Navigate to `http://localhost/`
+   - Frontend loads successfully
+
+#### Results
+
+**Before Fix**:
+- ❌ localhost:80 → Connection refused
+- ✅ Port-forward worked (workaround only)
+- ✅ Direct IP access worked (172.18.0.2)
+
+**After Fix**:
+- ✅ localhost:80 → Frontend accessible
+- ✅ No port-forward needed
+- ✅ Stable environment for development
+
+#### All Attempted Solutions Summary
+
+| Attempt | Action | Result | Why It Failed |
+|---------|--------|--------|---------------|
+| 1 | Change service to NodePort | Failed | NodePort (30986) doesn't match KIND mapping (80) |
+| 2 | Access via NodePort directly | Failed | Worker node NodePort not exposed by KIND |
+| 3 | Enable hostNetwork on worker | Partial | Works via IP but not localhost (wrong node) |
+| 4 | Move to control-plane (affinity only) | Failed | Control-plane taint blocks scheduling |
+| 5 | Add toleration + affinity + hostNetwork | ✅ Success | All pieces aligned correctly |
+
+#### KIND-Specific Notes
+
+This issue is specific to KIND (Kubernetes in Docker) clusters:
+
+**Why KIND is Different**:
+- Nodes are Docker containers, not VMs
+- Port mappings configured at container creation time
+- Only control-plane container has host port mappings
+- Worker nodes don't expose ports to host
+
+**KIND Port Mapping** (configured at cluster creation):
+```yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  extraPortMappings:
+  - containerPort: 80
+    hostPort: 80
+    protocol: TCP
+  - containerPort: 443
+    hostPort: 443
+    protocol: TCP
+```
+
+**Production vs KIND**:
+- **Production (EKS/GKE/AKS)**: LoadBalancer service gets real external IP
+- **KIND**: Must use hostNetwork + port mapping to expose services
+
+#### Lessons Learned
+
+1. **KIND requires ingress on control-plane** for localhost access
+2. **hostNetwork mode** is essential for KIND ingress controllers
+3. **Control-plane taints** must be tolerated to schedule ingress there
+4. **Port mappings** are defined at cluster creation, can't be changed later
+5. **NodePort alone doesn't work** in KIND without explicit port mapping
+
+#### Alternative Solutions for KIND
+
+**Option 1: Use Port-Forward** (temporary):
+```bash
+kubectl port-forward -n restaurant-system svc/frontend 8080:80
+# Access at http://localhost:8080
+```
+
+**Option 2: Recreate Cluster with Ingress** (destructive):
+```bash
+cat <<EOF | kind create cluster --config=-
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+  extraPortMappings:
+  - containerPort: 80
+    hostPort: 80
+  - containerPort: 443
+    hostPort: 443
+EOF
+```
+
+**Option 3: Our Solution** (non-destructive):
+- Patch existing ingress deployment
+- Enable hostNetwork
+- Move to control-plane with toleration
+
+#### Commands for Future Reference
+
+**Check KIND Port Mappings**:
+```bash
+docker ps --filter "name=control-plane"
+docker port <cluster-name>-control-plane
+```
+
+**Check Node Taints**:
+```bash
+kubectl get nodes -o json | jq '.items[].spec.taints'
+```
+
+**Remove Toleration** (if needed):
+```bash
+kubectl patch deployment ingress-nginx-controller -n ingress-nginx --type json \
+  -p='[{"op": "remove", "path": "/spec/template/spec/tolerations"}]'
+```
+
+**Disable hostNetwork** (if needed):
+```bash
+kubectl patch deployment ingress-nginx-controller -n ingress-nginx --type json \
+  -p='[{"op": "remove", "path": "/spec/template/spec/hostNetwork"}]'
 ```
 
 ---
