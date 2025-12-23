@@ -1,18 +1,16 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: restaurant-system-prod
+  name: restaurant-system
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
-  labels:
-    environment: production
 spec:
   project: default
 
   source:
     repoURL: https://github.com/shadrachdoc/Restaurant_management.git
-    targetRevision: main  # Production: Track main branch for versioned releases
+    targetRevision: developer  # Track developer branch for continuous deployment
     path: infrastructure/kubernetes
     
   destination:
