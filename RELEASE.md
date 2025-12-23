@@ -46,10 +46,18 @@ v1.1.0 → v2.0.0  (Breaking change)
 
 ### Environment Strategy
 
+**Single Environment Approach** (to avoid network/URL configuration issues):
+
 | Branch | Purpose | Image Tag | ArgoCD Deployment |
 |--------|---------|-----------|-------------------|
-| `developer` | Development/Testing | `latest` | Auto-deploy with latest |
-| `main` | Production-ready | `v1.2.3` | Auto-deploy with version tag |
+| `developer` | Active development | `latest` | Auto-deploy to `restaurant-system` namespace |
+| `main` | Release snapshots | `v1.2.3` | Updated by release workflow (manual ArgoCD switch for testing) |
+
+**Testing Releases**:
+- Development work happens on `developer` branch with `latest` images
+- When creating a release, the workflow updates `main` branch with versioned images
+- To test a specific release version, temporarily switch ArgoCD to track `main` branch
+- After testing, switch back to `developer` for ongoing development
 
 ---
 
@@ -144,6 +152,57 @@ v1.1.0 → v2.0.0  (Breaking change)
    ```
 
    You should see version `v1.2.0` instead of commit SHA!
+
+---
+
+## Testing a Release Version
+
+To test a specific release in your environment:
+
+### Step 1: Switch ArgoCD to Main Branch
+
+```bash
+# Edit the ArgoCD application to track main branch
+kubectl edit application restaurant-system -n argocd
+```
+
+Change `targetRevision` from `developer` to `main`:
+```yaml
+spec:
+  source:
+    targetRevision: main  # Change from 'developer' to 'main'
+```
+
+Save and ArgoCD will automatically sync to deploy the versioned release.
+
+### Step 2: Verify Release Deployment
+
+```bash
+# Check ArgoCD sync status
+kubectl get applications -n argocd
+
+# Verify pods are running with version tag
+kubectl get pods -n restaurant-system
+
+# Check deployment images
+kubectl get deployment auth-service -n restaurant-system -o jsonpath='{.spec.template.spec.containers[0].image}'
+# Should show: shadrach85/auth-service:v1.2.0
+```
+
+### Step 3: Return to Development
+
+After testing, switch back to developer branch:
+
+```bash
+kubectl edit application restaurant-system -n argocd
+```
+
+Change back to:
+```yaml
+spec:
+  source:
+    targetRevision: developer  # Change back to 'developer'
+```
 
 ---
 
