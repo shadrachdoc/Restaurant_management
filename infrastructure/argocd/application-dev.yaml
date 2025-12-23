@@ -1,24 +1,24 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: restaurant-system-prod
+  name: restaurant-system-dev
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   labels:
-    environment: production
+    environment: development
 spec:
   project: default
 
   source:
     repoURL: https://github.com/shadrachdoc/Restaurant_management.git
-    targetRevision: main  # Production: Track main branch for versioned releases
+    targetRevision: developer  # Development: Track developer branch for latest changes
     path: infrastructure/kubernetes
-    
+
   destination:
     server: https://kubernetes.default.svc
-    namespace: restaurant-system
-    
+    namespace: restaurant-system-dev  # Separate namespace for development
+
   syncPolicy:
     automated:
       prune: true
@@ -34,7 +34,7 @@ spec:
         duration: 5s
         factor: 2
         maxDuration: 3m
-        
+
   # Health assessment
   ignoreDifferences:
     - group: apps
