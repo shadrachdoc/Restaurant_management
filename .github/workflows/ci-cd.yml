@@ -13,9 +13,10 @@ env:
 
 jobs:
   build-and-push:
+    name: Build and Push Docker Images
     runs-on: ubuntu-latest
-    permissions:
-      contents: write  # Allow pushing commits back to repo
+    outputs:
+      short_sha: ${{ steps.set_sha.outputs.short_sha }}
 
     steps:
       - name: Checkout code
@@ -33,13 +34,20 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Set SHORT_SHA
+        id: set_sha
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+
       - name: Build and Push Frontend
         uses: docker/build-push-action@v5
         with:
           context: .
           file: frontend/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:latest,${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ github.sha }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:latest,${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ env.SHORT_SHA }}
 
       - name: Build and Push API Gateway
         uses: docker/build-push-action@v5
@@ -47,7 +55,7 @@ jobs:
           context: .
           file: services/api-gateway/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:latest,${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:${{ github.sha }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:latest,${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:${{ env.SHORT_SHA }}
 
       - name: Build and Push Auth Service
         uses: docker/build-push-action@v5
@@ -55,7 +63,7 @@ jobs:
           context: .
           file: services/auth-service/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:latest,${{ secrets.DOCKERHUB_USERNAME }}/auth-service:${{ github.sha }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:latest,${{ secrets.DOCKERHUB_USERNAME }}/auth-service:${{ env.SHORT_SHA }}
 
       - name: Build and Push Restaurant Service
         uses: docker/build-push-action@v5
@@ -63,7 +71,7 @@ jobs:
           context: .
           file: services/restaurant-service/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:latest,${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:${{ github.sha }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:latest,${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:${{ env.SHORT_SHA }}
 
       - name: Build and Push Order Service
         uses: docker/build-push-action@v5
@@ -71,36 +79,98 @@ jobs:
           context: .
           file: services/order-service/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/order-service:latest,${{ secrets.DOCKERHUB_USERNAME }}/order-service:${{ github.sha }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/order-service:latest,${{ secrets.DOCKERHUB_USERNAME }}/order-service:${{ env.SHORT_SHA }}
+
+      - name: Build Summary
+        run: |
+          echo "========================================="
+          echo "✅ Docker Images Built and Pushed"
+          echo "========================================="
+          echo "Images pushed to DockerHub:"
+          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ env.SHORT_SHA }}"
+          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:${{ env.SHORT_SHA }}"
+          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:${{ env.SHORT_SHA }}"
+          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:${{ env.SHORT_SHA }}"
+          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/order-service:${{ env.SHORT_SHA }}"
+          echo ""
+          echo "📝 Images tagged with:"
+          echo "  - latest"
+          echo "  - ${{ env.SHORT_SHA }}"
+
+  verify-and-update-manifests:
+    name: Verify Images and Update Manifests
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Wait for DockerHub images
+        run: |
+          echo "Waiting for images to be available on DockerHub..."
+          sleep 30
+          echo "✅ Images should now be available"
+
+      - name: Verify images on DockerHub
+        run: |
+          echo "Verifying images are available on DockerHub..."
+          SHORT_SHA="${{ needs.build-and-push.outputs.short_sha }}"
+
+          # Function to check if image exists
+          check_image() {
+            IMAGE=$1
+            echo "Checking $IMAGE..."
+            if docker manifest inspect $IMAGE > /dev/null 2>&1; then
+              echo "✅ $IMAGE is available"
+              return 0
+            else
+              echo "❌ $IMAGE not found"
+              return 1
+            fi
+          }
+
+          # Check all images
+          check_image "${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:$SHORT_SHA"
+          check_image "${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:$SHORT_SHA"
+          check_image "${{ secrets.DOCKERHUB_USERNAME }}/auth-service:$SHORT_SHA"
+          check_image "${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:$SHORT_SHA"
+          check_image "${{ secrets.DOCKERHUB_USERNAME }}/order-service:$SHORT_SHA"
+
+          echo "✅ All images verified on DockerHub"
 
       - name: Update Kubernetes Deployments
         run: |
-          echo "Updating Kubernetes deployment files to use DockerHub images..."
+          echo "Updating Kubernetes deployment files with new image tags..."
+          SHORT_SHA="${{ needs.build-and-push.outputs.short_sha }}"
+          echo "Using image tag: $SHORT_SHA"
 
           # Update frontend deployment
-          sed -i "s|image: restaurant-frontend:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:latest|g" infrastructure/kubernetes/frontend-deployment.yaml
+          sed -i "s|image: shadrach85/restaurant-frontend:.*|image: shadrach85/restaurant-frontend:$SHORT_SHA|g" infrastructure/kubernetes/frontend-deployment.yaml
           sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/frontend-deployment.yaml
 
           # Update api-gateway deployment
-          sed -i "s|image: restaurant_management_api-gateway:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:latest|g" infrastructure/kubernetes/api-gateway-deployment.yaml
-          sed -i "s|image: api-gateway:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:latest|g" infrastructure/kubernetes/api-gateway-deployment.yaml
+          sed -i "s|image: shadrach85/api-gateway:.*|image: shadrach85/api-gateway:$SHORT_SHA|g" infrastructure/kubernetes/api-gateway-deployment.yaml
           sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/api-gateway-deployment.yaml
 
           # Update auth-service deployment
-          sed -i "s|image: restaurant_management_auth-service:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:latest|g" infrastructure/kubernetes/auth-service-deployment.yaml
-          sed -i "s|image: auth-service:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:latest|g" infrastructure/kubernetes/auth-service-deployment.yaml
+          sed -i "s|image: shadrach85/auth-service:.*|image: shadrach85/auth-service:$SHORT_SHA|g" infrastructure/kubernetes/auth-service-deployment.yaml
           sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/auth-service-deployment.yaml
 
           # Update restaurant-service deployment
-          sed -i "s|image: restaurant_management_restaurant-service:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:latest|g" infrastructure/kubernetes/restaurant-service-deployment.yaml
-          sed -i "s|image: restaurant-service:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:latest|g" infrastructure/kubernetes/restaurant-service-deployment.yaml
+          sed -i "s|image: shadrach85/restaurant-service:.*|image: shadrach85/restaurant-service:$SHORT_SHA|g" infrastructure/kubernetes/restaurant-service-deployment.yaml
           sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/restaurant-service-deployment.yaml
 
           # Update order-service deployment
-          sed -i "s|image: order-service:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/order-service:latest|g" infrastructure/kubernetes/order-service-deployment.yaml
+          sed -i "s|image: shadrach85/order-service:.*|image: shadrach85/order-service:$SHORT_SHA|g" infrastructure/kubernetes/order-service-deployment.yaml
           sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/order-service-deployment.yaml
 
-          echo "✅ Deployment files updated successfully!"
+          echo "✅ Deployment files updated to use commit SHA: $SHORT_SHA"
 
       - name: Commit and Push Deployment Updates
         run: |
@@ -113,25 +183,24 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update deployments to use DockerHub images [skip ci]"
+            SHORT_SHA="${{ needs.build-and-push.outputs.short_sha }}"
+            git commit -m "Update deployments to image tag $SHORT_SHA [skip ci]"
             git push origin HEAD:${GITHUB_REF#refs/heads/}
+            echo "✅ Deployment manifests updated and pushed"
           fi
 
-      - name: Summary
+      - name: Final Summary
         run: |
           echo "========================================="
-          echo "✅ Build, Push & Deploy Update Complete"
+          echo "✅ Pipeline Complete"
           echo "========================================="
-          echo "Images pushed to DockerHub:"
-          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:latest"
-          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:latest"
-          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:latest"
-          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:latest"
-          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/order-service:latest"
-          echo ""
-          echo "📝 Images tagged with:"
-          echo "  - latest"
-          echo "  - ${{ github.sha }}"
+          SHORT_SHA="${{ needs.build-and-push.outputs.short_sha }}"
+          echo "Image Tag: $SHORT_SHA"
           echo ""
           echo "🚀 Deployment files updated and committed"
-          echo "ArgoCD will automatically detect changes and deploy"
+          echo "🔄 ArgoCD will now detect changes and pull from DockerHub"
+          echo ""
+          echo "Next steps:"
+          echo "  1. ArgoCD syncs repository changes"
+          echo "  2. ArgoCD pulls images from DockerHub"
+          echo "  3. Pods restart with new images"
