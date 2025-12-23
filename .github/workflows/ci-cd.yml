@@ -1,4 +1,4 @@
-name: Build and Load Images to KIND
+name: Build and Push Docker Images
 
 on:
   push:
@@ -8,10 +8,10 @@ on:
       - staging
 
 env:
-  KIND_CLUSTER_NAME: restaurant-cluster
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
 
 jobs:
-  build-and-load:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,37 +21,111 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build All Images
-        run: |
-          echo "Building Docker images..."
-          docker build -f frontend/Dockerfile -t restaurant-frontend:latest .
-          docker build -f services/api-gateway/Dockerfile -t api-gateway:latest .
-          docker build -f services/auth-service/Dockerfile -t auth-service:latest .
-          docker build -f services/restaurant-service/Dockerfile -t restaurant-service:latest .
-          docker build -f services/order-service/Dockerfile -t order-service:latest .
-          echo "✓ All images built successfully!"
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Load Images into KIND Cluster
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:latest,${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ github.sha }}
+
+      - name: Build and Push API Gateway
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/api-gateway/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:latest,${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:${{ github.sha }}
+
+      - name: Build and Push Auth Service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/auth-service/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:latest,${{ secrets.DOCKERHUB_USERNAME }}/auth-service:${{ github.sha }}
+
+      - name: Build and Push Restaurant Service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/restaurant-service/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:latest,${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:${{ github.sha }}
+
+      - name: Build and Push Order Service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/order-service/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/order-service:latest,${{ secrets.DOCKERHUB_USERNAME }}/order-service:${{ github.sha }}
+
+      - name: Update Kubernetes Deployments
         run: |
-          echo "Loading images into KIND cluster: ${KIND_CLUSTER_NAME}"
-          docker save restaurant-frontend:latest | kind load image-archive /dev/stdin --name ${KIND_CLUSTER_NAME}
-          docker save api-gateway:latest | kind load image-archive /dev/stdin --name ${KIND_CLUSTER_NAME}
-          docker save auth-service:latest | kind load image-archive /dev/stdin --name ${KIND_CLUSTER_NAME}
-          docker save restaurant-service:latest | kind load image-archive /dev/stdin --name ${KIND_CLUSTER_NAME}
-          docker save order-service:latest | kind load image-archive /dev/stdin --name ${KIND_CLUSTER_NAME}
-          echo "✓ All images loaded successfully!"
+          echo "Updating Kubernetes deployment files to use DockerHub images..."
+
+          # Update frontend deployment
+          sed -i "s|image: restaurant-frontend:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:latest|g" infrastructure/kubernetes/frontend-deployment.yaml
+          sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/frontend-deployment.yaml
+
+          # Update api-gateway deployment
+          sed -i "s|image: restaurant_management_api-gateway:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:latest|g" infrastructure/kubernetes/api-gateway-deployment.yaml
+          sed -i "s|image: api-gateway:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:latest|g" infrastructure/kubernetes/api-gateway-deployment.yaml
+          sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/api-gateway-deployment.yaml
+
+          # Update auth-service deployment
+          sed -i "s|image: restaurant_management_auth-service:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:latest|g" infrastructure/kubernetes/auth-service-deployment.yaml
+          sed -i "s|image: auth-service:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:latest|g" infrastructure/kubernetes/auth-service-deployment.yaml
+          sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/auth-service-deployment.yaml
+
+          # Update restaurant-service deployment
+          sed -i "s|image: restaurant_management_restaurant-service:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:latest|g" infrastructure/kubernetes/restaurant-service-deployment.yaml
+          sed -i "s|image: restaurant-service:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:latest|g" infrastructure/kubernetes/restaurant-service-deployment.yaml
+          sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/restaurant-service-deployment.yaml
+
+          # Update order-service deployment
+          sed -i "s|image: order-service:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/order-service:latest|g" infrastructure/kubernetes/order-service-deployment.yaml
+          sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/order-service-deployment.yaml
+
+          echo "✅ Deployment files updated successfully!"
+
+      - name: Commit and Push Deployment Updates
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+
+          git add infrastructure/kubernetes/*.yaml
+
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update deployments to use DockerHub images [skip ci]"
+            git push
+          fi
 
       - name: Summary
         run: |
           echo "========================================="
-          echo "✅ Build & Load Complete"
+          echo "✅ Build, Push & Deploy Update Complete"
           echo "========================================="
-          echo "Cluster: ${KIND_CLUSTER_NAME}"
-          echo "Images:"
-          echo "  ✓ restaurant-frontend:latest"
-          echo "  ✓ api-gateway:latest"
-          echo "  ✓ auth-service:latest"
-          echo "  ✓ restaurant-service:latest"
-          echo "  ✓ order-service:latest"
+          echo "Images pushed to DockerHub:"
+          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:latest"
+          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:latest"
+          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:latest"
+          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:latest"
+          echo "  ✓ ${{ secrets.DOCKERHUB_USERNAME }}/order-service:latest"
           echo ""
-          echo "ArgoCD will auto-deploy the changes."
+          echo "📝 Images tagged with:"
+          echo "  - latest"
+          echo "  - ${{ github.sha }}"
+          echo ""
+          echo "🚀 Deployment files updated and committed"
+          echo "ArgoCD will automatically detect changes and deploy"

@@ -626,13 +626,15 @@ open http://localhost:3000
 
 ## 📝 Notes
 
-- Database-dependent services run on **worker** node (worker2 has DNS issues)
-- Frontend can run on any node (no database dependency)
+- **Application services** (auth, order, restaurant) run on **worker2** node (worker has DNS issues)
+- **Database services** (postgres, rabbitmq) run on **worker** node (they don't need DNS)
+- Frontend and ArgoCD can run on any node with reliable DNS
 - Database password: `restaurant_pass_2024`
 - JWT secrets are placeholders - change in production
 - Order service is PUBLIC - no authentication required for customers
 - Session tokens expire after 4 hours
 - ArgoCD uses port 8081 (port 8080 used by Ingress)
+- See [ISSUES.md](ISSUES.md) for known issues and troubleshooting
 
 ---
 
