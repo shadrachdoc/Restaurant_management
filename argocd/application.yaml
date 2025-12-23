@@ -1,29 +1,20 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: restaurant-system
+  name: restaurant-management
   namespace: argocd
 spec:
   project: default
-
+  
   source:
-    repoURL: https://github.com/shadrachdoc/Restaurant_management.git
+    repoURL: https://github.com/yourusername/Restaurant_management.git
     targetRevision: HEAD
-    path: helm/restaurant-system
-    helm:
-      releaseName: restaurant-system
-      valueFiles:
-        - values.yaml
-      parameters:
-        - name: global.imageRegistry
-          value: docker.io
-        - name: posService.enabled
-          value: "false"
-
+    path: infrastructure/kubernetes
+  
   destination:
     server: https://kubernetes.default.svc
     namespace: restaurant-system
-
+  
   syncPolicy:
     automated:
       prune: true
@@ -37,8 +28,5 @@ spec:
         duration: 5s
         factor: 2
         maxDuration: 3m
-    managedNamespaceMetadata:
-      labels:
-        argocd.argoproj.io/instance: restaurant-system
 
-  revisionHistoryLimit: 10
+  revisionHistoryLimit: 3
