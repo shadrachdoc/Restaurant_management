@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Build and Load Images to KIND
 
 on:
   push:
@@ -6,17 +6,12 @@ on:
       - main
       - developer
       - staging
-  pull_request:
-    branches:
-      - main
-      - developer
 
 env:
   KIND_CLUSTER_NAME: restaurant-cluster
-  NAMESPACE: restaurant-system
 
 jobs:
-  build-and-deploy:
+  build-and-load:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,128 +21,37 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Install KIND
+      - name: Build All Images
         run: |
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
-          chmod +x ./kind
-          sudo mv ./kind /usr/local/bin/kind
-
-      - name: Install kubectl
-        run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          sudo mv kubectl /usr/local/bin/
-
-      - name: Create KIND cluster
-        run: |
-          if ! kind get clusters | grep -q "^${KIND_CLUSTER_NAME}$"; then
-            kind create cluster --name ${KIND_CLUSTER_NAME} --config infrastructure/kubernetes/kind-config.yaml
-          fi
-
-      - name: Create namespace
-        run: |
-          kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
-
-      - name: Build Frontend Image
-        run: |
+          echo "Building Docker images..."
           docker build -f frontend/Dockerfile -t restaurant-frontend:latest .
-          docker tag restaurant-frontend:latest frontend:latest
-
-      - name: Build API Gateway Image
-        run: |
           docker build -f services/api-gateway/Dockerfile -t api-gateway:latest .
-
-      - name: Build Auth Service Image
-        run: |
           docker build -f services/auth-service/Dockerfile -t auth-service:latest .
-
-      - name: Build Restaurant Service Image
-        run: |
           docker build -f services/restaurant-service/Dockerfile -t restaurant-service:latest .
-
-      - name: Build Order Service Image
-        run: |
           docker build -f services/order-service/Dockerfile -t order-service:latest .
+          echo "✓ All images built successfully!"
 
-      - name: Load Images into KIND
+      - name: Load Images into KIND Cluster
         run: |
-          kind load docker-image restaurant-frontend:latest --name ${KIND_CLUSTER_NAME}
-          kind load docker-image api-gateway:latest --name ${KIND_CLUSTER_NAME}
-          kind load docker-image auth-service:latest --name ${KIND_CLUSTER_NAME}
-          kind load docker-image restaurant-service:latest --name ${KIND_CLUSTER_NAME}
-          kind load docker-image order-service:latest --name ${KIND_CLUSTER_NAME}
+          echo "Loading images into KIND cluster: ${KIND_CLUSTER_NAME}"
+          docker save restaurant-frontend:latest | kind load image-archive /dev/stdin --name ${KIND_CLUSTER_NAME}
+          docker save api-gateway:latest | kind load image-archive /dev/stdin --name ${KIND_CLUSTER_NAME}
+          docker save auth-service:latest | kind load image-archive /dev/stdin --name ${KIND_CLUSTER_NAME}
+          docker save restaurant-service:latest | kind load image-archive /dev/stdin --name ${KIND_CLUSTER_NAME}
+          docker save order-service:latest | kind load image-archive /dev/stdin --name ${KIND_CLUSTER_NAME}
+          echo "✓ All images loaded successfully!"
 
-      - name: Deploy Database (PostgreSQL)
+      - name: Summary
         run: |
-          kubectl apply -f infrastructure/kubernetes/postgres-deployment.yaml -n ${NAMESPACE}
-          kubectl wait --for=condition=ready pod -l app=postgres -n ${NAMESPACE} --timeout=300s
-
-      - name: Deploy Redis
-        run: |
-          kubectl apply -f infrastructure/kubernetes/redis-deployment.yaml -n ${NAMESPACE}
-
-      - name: Deploy RabbitMQ
-        run: |
-          kubectl apply -f infrastructure/kubernetes/rabbitmq-deployment.yaml -n ${NAMESPACE}
-
-      - name: Deploy Auth Service
-        run: |
-          kubectl apply -f infrastructure/kubernetes/auth-service-deployment.yaml -n ${NAMESPACE}
-          kubectl rollout status deployment/auth-service -n ${NAMESPACE} --timeout=300s
-
-      - name: Deploy Restaurant Service
-        run: |
-          kubectl apply -f infrastructure/kubernetes/restaurant-service-deployment.yaml -n ${NAMESPACE}
-          kubectl rollout status deployment/restaurant-service -n ${NAMESPACE} --timeout=300s
-
-      - name: Deploy Order Service
-        run: |
-          kubectl apply -f infrastructure/kubernetes/order-service-deployment.yaml -n ${NAMESPACE}
-          kubectl rollout status deployment/order-service -n ${NAMESPACE} --timeout=300s
-
-      - name: Deploy API Gateway
-        run: |
-          kubectl apply -f infrastructure/kubernetes/api-gateway-deployment.yaml -n ${NAMESPACE}
-          kubectl rollout status deployment/api-gateway -n ${NAMESPACE} --timeout=300s
-
-      - name: Deploy Frontend
-        run: |
-          kubectl apply -f infrastructure/kubernetes/frontend-deployment.yaml -n ${NAMESPACE}
-          kubectl rollout status deployment/frontend -n ${NAMESPACE} --timeout=300s
-
-      - name: Deploy Ingress
-        run: |
-          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
-          kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=300s
-          kubectl apply -f infrastructure/kubernetes/ingress.yaml -n ${NAMESPACE}
-
-      - name: Verify Deployments
-        run: |
-          echo "=== Pods Status ==="
-          kubectl get pods -n ${NAMESPACE}
+          echo "========================================="
+          echo "✅ Build & Load Complete"
+          echo "========================================="
+          echo "Cluster: ${KIND_CLUSTER_NAME}"
+          echo "Images:"
+          echo "  ✓ restaurant-frontend:latest"
+          echo "  ✓ api-gateway:latest"
+          echo "  ✓ auth-service:latest"
+          echo "  ✓ restaurant-service:latest"
+          echo "  ✓ order-service:latest"
           echo ""
-          echo "=== Services Status ==="
-          kubectl get svc -n ${NAMESPACE}
-          echo ""
-          echo "=== Ingress Status ==="
-          kubectl get ingress -n ${NAMESPACE}
-
-      - name: Run Health Checks
-        run: |
-          echo "Waiting for services to be ready..."
-          sleep 30
-          kubectl port-forward svc/auth-service -n ${NAMESPACE} 8002:8001 &
-          kubectl port-forward svc/restaurant-service -n ${NAMESPACE} 8003:8003 &
-          kubectl port-forward svc/order-service -n ${NAMESPACE} 8004:8004 &
-          sleep 10
-          curl -f http://localhost:8002/health || exit 1
-          curl -f http://localhost:8003/health || exit 1
-          curl -f http://localhost:8004/health || exit 1
-          echo "All health checks passed!"
-
-      - name: Cleanup (on failure)
-        if: failure()
-        run: |
-          kubectl logs -l app=auth-service -n ${NAMESPACE} --tail=50 || true
-          kubectl logs -l app=restaurant-service -n ${NAMESPACE} --tail=50 || true
-          kubectl logs -l app=order-service -n ${NAMESPACE} --tail=50 || true
+          echo "ArgoCD will auto-deploy the changes."
