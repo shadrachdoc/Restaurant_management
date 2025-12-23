@@ -19,8 +19,8 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: restaurant_management_api-gateway:latest
-        imagePullPolicy: IfNotPresent
+        image: shadrach85/api-gateway:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
           name: http
