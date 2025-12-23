@@ -178,13 +178,20 @@ jobs:
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
 
-          git add infrastructure/kubernetes/*.yaml
+          # Checkout main branch
+          git checkout main
+          git pull origin main
 
-          if git diff --staged --quiet; then
+          # Apply changes from the tag
+          git checkout ${{ github.ref }} -- infrastructure/kubernetes/*.yaml
+
+          # Check if there are changes
+          if git diff --quiet; then
             echo "No changes to commit"
           else
+            git add infrastructure/kubernetes/*.yaml
             git commit -m "Release ${{ steps.version.outputs.version }}: Update deployments [skip ci]"
-            git push origin HEAD:main
+            git push origin main
           fi
 
       - name: Create GitHub Release
