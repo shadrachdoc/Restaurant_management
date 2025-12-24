@@ -28,7 +28,7 @@ spec:
                 - restaurant-cluster-worker2
       containers:
       - name: frontend
-        image: shadrach85/restaurant-frontend:fda2e04
+        image: shadrach85/restaurant-frontend:a1b42eb
         imagePullPolicy: Always
         ports:
         - containerPort: 80
