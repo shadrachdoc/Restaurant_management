@@ -33,17 +33,17 @@ data:
   APP_API_GATEWAY_PORT: "8000"
 
   # CORS
-  CORS_ORIGINS: "http://localhost:3000,http://localhost:5173"
+  CORS_ORIGINS: "http://localhost:3000,http://localhost:5173,https://restaurant.corpv3.com"
 
   # Environment
-  ENVIRONMENT: "development"
+  ENVIRONMENT: "production"
 
   # File Upload
   MAX_UPLOAD_SIZE: "5242880"
   UPLOAD_DIR: "/uploads"
 
   # QR Code Configuration
-  QR_CODE_BASE_URL: "http://localhost:3000/table"
+  QR_CODE_BASE_URL: "https://restaurant.corpv3.com/table"
   QR_CODE_SIZE: "300"
   QR_CODE_ERROR_CORRECTION: "M"
 
