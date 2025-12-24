@@ -41,12 +41,13 @@ async def create_order(
     Customers can place orders directly via QR code or table session
     """
     # Calculate order totals
-    total_amount = 0.0
+    subtotal = 0.0
     order_items_data = []
 
     for item in order_data.items:
         # Calculate item subtotal
         item_subtotal = item.quantity * 0.0  # Price will be fetched from restaurant-service
+        subtotal += item_subtotal
 
         order_items_data.append({
             "menu_item_id": item.menu_item_id,
@@ -58,14 +59,21 @@ async def create_order(
             "contributor_name": item.contributor_name
         })
 
+    # Calculate tax (10%)
+    tax = subtotal * 0.10
+    total = subtotal + tax
+
     # Create order
     new_order = Order(
         restaurant_id=order_data.restaurant_id,
         table_id=order_data.table_id,
         order_number=generate_order_number(),
         status=OrderStatus.PENDING,
-        total_amount=total_amount,
-        session_id=order_data.session_id,
+        customer_name=order_data.customer_name,
+        customer_phone=order_data.customer_phone,
+        subtotal=subtotal,
+        tax=tax,
+        total=total,
         special_instructions=order_data.special_instructions
     )
 

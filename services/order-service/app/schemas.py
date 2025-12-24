@@ -42,8 +42,9 @@ class OrderCreate(BaseModel):
     restaurant_id: UUID
     table_id: UUID
     items: List[OrderItemCreate] = Field(min_length=1)
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
     special_instructions: Optional[str] = None
-    session_id: Optional[str] = None  # For collaborative ordering
 
 
 class OrderUpdateStatus(BaseModel):
@@ -58,13 +59,15 @@ class OrderResponse(BaseModel):
     table_id: UUID
     order_number: str
     status: OrderStatus
-    total_amount: float
-    session_id: Optional[str]
+    customer_name: Optional[str]
+    customer_phone: Optional[str]
+    subtotal: float
+    tax: float
+    total: float
     special_instructions: Optional[str]
     items: List[OrderItemResponse]
     created_at: datetime
     updated_at: datetime
-    confirmed_at: Optional[datetime]
     completed_at: Optional[datetime]
 
     class Config:
