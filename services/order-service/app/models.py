@@ -24,10 +24,15 @@ class Order(Base):
     # Order details
     order_number = Column(String(50), unique=True, nullable=False, index=True)
     status = Column(SQLEnum(OrderStatus), default=OrderStatus.PENDING, nullable=False, index=True)
-    total_amount = Column(Float, nullable=False, default=0.0)
 
-    # Customer session info
-    session_id = Column(String(255), nullable=True, index=True)  # For tracking collaborative orders
+    # Customer info
+    customer_name = Column(String(255), nullable=True)
+    customer_phone = Column(String(20), nullable=True)
+
+    # Pricing
+    subtotal = Column(Float, nullable=False, default=0.0)
+    tax = Column(Float, nullable=False, default=0.0)
+    total = Column(Float, nullable=False, default=0.0)
 
     # Special instructions
     special_instructions = Column(Text, nullable=True)
@@ -35,7 +40,6 @@ class Order(Base):
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    confirmed_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
 
     # Relationships
