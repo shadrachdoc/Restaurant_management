@@ -112,10 +112,12 @@ export default function PublicMenu() {
 
     try {
       const orderData = {
+        restaurant_id: restaurantId,
         table_id: tableId,
         customer_name: customerInfo.name,
         customer_phone: customerInfo.phone || null,
         special_instructions: customerInfo.specialInstructions || null,
+        order_type: 'DINE_IN',
         items: cart.map(item => ({
           menu_item_id: item.id,
           quantity: item.quantity,
