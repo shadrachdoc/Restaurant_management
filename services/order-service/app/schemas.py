@@ -22,15 +22,11 @@ class OrderItemResponse(BaseModel):
     id: UUID
     order_id: UUID
     menu_item_id: UUID
-    menu_item_name: str
-    unit_price: float
+    item_name: str
+    item_price: float
     quantity: int
-    subtotal: float
-    status: OrderStatus
-    special_requests: Optional[str]
-    contributor_name: Optional[str]
+    special_instructions: Optional[str]
     created_at: datetime
-    updated_at: datetime
 
     class Config:
         from_attributes = True

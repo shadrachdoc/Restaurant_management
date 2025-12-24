@@ -59,31 +59,23 @@ class OrderItem(Base):
 
     # Menu item reference
     menu_item_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    menu_item_name = Column(String(255), nullable=False)  # Snapshot of name
-    unit_price = Column(Float, nullable=False)  # Snapshot of price
+    item_name = Column(String(255), nullable=False)  # Snapshot of name
+    item_price = Column(Float, nullable=False)  # Snapshot of price
 
     # Order details
     quantity = Column(Integer, nullable=False, default=1)
-    subtotal = Column(Float, nullable=False)
 
-    # Status tracking
-    status = Column(SQLEnum(OrderStatus), default=OrderStatus.PENDING, nullable=False, index=True)
-
-    # Special requests
-    special_requests = Column(Text, nullable=True)
-
-    # Contributor tracking (for collaborative orders)
-    contributor_name = Column(String(255), nullable=True)
+    # Special instructions
+    special_instructions = Column(Text, nullable=True)
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     # Relationships
     order = relationship("Order", back_populates="items")
 
     def __repr__(self):
-        return f"<OrderItem(id={self.id}, item={self.menu_item_name}, qty={self.quantity})>"
+        return f"<OrderItem(id={self.id}, item={self.item_name}, qty={self.quantity})>"
 
 
 class TableSession(Base):

@@ -45,18 +45,15 @@ async def create_order(
     order_items_data = []
 
     for item in order_data.items:
-        # Calculate item subtotal
-        item_subtotal = item.quantity * 0.0  # Price will be fetched from restaurant-service
-        subtotal += item_subtotal
+        # For now, using placeholder values - should fetch from restaurant-service
+        item_price = 0.0  # TODO: Fetch from menu item
 
         order_items_data.append({
             "menu_item_id": item.menu_item_id,
-            "menu_item_name": "",  # Will be filled by restaurant-service
-            "unit_price": 0.0,  # Will be filled by restaurant-service
+            "item_name": "",  # TODO: Fetch from menu item
+            "item_price": item_price,
             "quantity": item.quantity,
-            "subtotal": item_subtotal,
-            "special_requests": item.special_requests,
-            "contributor_name": item.contributor_name
+            "special_instructions": item.special_requests
         })
 
     # Calculate tax (10%)
