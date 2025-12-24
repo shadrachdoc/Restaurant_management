@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: shadrach85/api-gateway:8d0df86
+        image: shadrach85/api-gateway:c3dd49c
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
