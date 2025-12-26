@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: shadrach85/auth-service:a1b42eb
+        image: shadrach85/auth-service:3b93d10
         imagePullPolicy: Always
         ports:
         - containerPort: 8001
