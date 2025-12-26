@@ -128,6 +128,14 @@ export const menuAPI = {
   update: (restaurantId, itemId, data) => restaurantApi.put(`/api/v1/restaurants/${restaurantId}/menu-items/${itemId}`, data),
   delete: (restaurantId, itemId) => restaurantApi.delete(`/api/v1/restaurants/${restaurantId}/menu-items/${itemId}`),
   toggleAvailability: (restaurantId, itemId) => restaurantApi.patch(`/api/v1/restaurants/${restaurantId}/menu-items/${itemId}/toggle-availability`),
+  uploadImage: (restaurantId, formData) => {
+    return axios.post(`/api/v1/restaurants/${restaurantId}/menu-items/upload-image`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      }
+    });
+  },
 };
 
 // Table API - uses Restaurant Service

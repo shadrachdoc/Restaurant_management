@@ -28,7 +28,7 @@ spec:
                 - restaurant-cluster-worker2
       containers:
       - name: frontend
-        image: shadrach85/restaurant-frontend:checkout-redirect-fix
+        image: shadrach85/restaurant-frontend:image-upload
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80

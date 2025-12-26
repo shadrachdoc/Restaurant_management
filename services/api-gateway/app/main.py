@@ -94,7 +94,11 @@ async def gateway(
     print(f"DEBUG: Received path: '{path}', method: {request.method}")
 
     # Determine target service based on path
-    if path.startswith("api/v1/auth") or path.startswith("api/v1/users"):
+    if path.startswith("uploads/"):
+        # Route uploaded files to restaurant service
+        target_url = f"{RESTAURANT_SERVICE_URL}/{path}"
+        print(f"DEBUG: Routing uploads to RESTAURANT_SERVICE: {target_url}")
+    elif path.startswith("api/v1/auth") or path.startswith("api/v1/users"):
         target_url = f"{AUTH_SERVICE_URL}/{path}"
         print(f"DEBUG: Routing to AUTH_SERVICE: {target_url}")
     elif path.startswith("api/v1/customers"):
