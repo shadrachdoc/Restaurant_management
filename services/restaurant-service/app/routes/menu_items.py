@@ -27,7 +27,7 @@ logger = setup_logger("menu-item-routes")
 # Image upload configuration
 UPLOAD_DIR = Path("/app/uploads/menu-items")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff", ".tif", ".avif", ".svg"}
 
 
 @router.post("/{restaurant_id}/menu-items", response_model=MenuItemResponse, status_code=status.HTTP_201_CREATED)

@@ -173,12 +173,12 @@ const RestaurantMenuPage = () => {
                   className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl hover:scale-105 transition-all duration-300"
                 >
                   {/* Item Image */}
-                  <div className="relative h-48 overflow-hidden bg-gradient-to-br from-blue-100 to-purple-100">
+                  <div className="relative h-48 overflow-hidden bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
                     {item.image_url ? (
                       <img
                         src={item.image_url}
                         alt={item.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full bg-gradient-to-br from-orange-100 via-pink-100 to-purple-100">

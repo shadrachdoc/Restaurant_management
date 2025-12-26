@@ -28,7 +28,7 @@ spec:
                 - restaurant-cluster-worker
       containers:
       - name: restaurant-service
-        image: shadrach85/restaurant-restaurant-service:static-files
+        image: shadrach85/restaurant-restaurant-service:all-formats
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8003

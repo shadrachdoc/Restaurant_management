@@ -170,11 +170,13 @@ export default function MenuManagement() {
                     <div key={item.id} className="bg-white rounded-xl shadow-md overflow-hidden">
                       {/* Item Image */}
                       {item.image_url ? (
-                        <img
-                          src={item.image_url}
-                          alt={item.name}
-                          className="w-full h-40 object-cover"
-                        />
+                        <div className="w-full h-40 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                          <img
+                            src={item.image_url}
+                            alt={item.name}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
                       ) : (
                         <div className="w-full h-40 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
                           <span className="text-5xl">🍽️</span>
