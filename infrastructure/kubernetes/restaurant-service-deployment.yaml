@@ -79,6 +79,11 @@ spec:
             configMapKeyRef:
               name: restaurant-config
               key: ENVIRONMENT
+        - name: QR_CODE_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: QR_CODE_BASE_URL
         volumeMounts:
         - name: uploads
           mountPath: /uploads
