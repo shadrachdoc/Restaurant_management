@@ -8,20 +8,10 @@ appVersion: "1.0.0"
 keywords:
   - restaurant
   - management
-  - pos
   - orders
   - menu
+  - microservices
 
 maintainers:
   - name: Restaurant Team
     email: team@restaurant.com
-
-dependencies:
-  - name: postgresql
-    version: 12.x.x
-    repository: https://charts.bitnami.com/bitnami
-    condition: postgresql.enabled
-  - name: redis
-    version: 17.x.x
-    repository: https://charts.bitnami.com/bitnami
-    condition: redis.enabled

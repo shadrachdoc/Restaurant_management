@@ -1,0 +1,64 @@
+{{- if .Values.orderService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.orderService.name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.orderService.name }}
+    tier: backend
+spec:
+  replicas: {{ .Values.orderService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.orderService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.orderService.name }}
+        tier: backend
+    spec:
+      containers:
+      - name: {{ .Values.orderService.name }}
+        image: "{{ .Values.orderService.image.repository }}:{{ .Values.orderService.image.tag }}"
+        imagePullPolicy: {{ .Values.orderService.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.orderService.service.port }}
+          name: http
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@postgres-service:{{ .Values.postgresql.service.port }}/{{ .Values.postgresql.auth.database }}"
+        - name: POSTGRES_USER
+          value: "{{ .Values.postgresql.auth.username }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ .Values.postgresql.auth.password }}"
+        - name: POSTGRES_DB
+          value: "{{ .Values.postgresql.auth.database }}"
+        - name: POSTGRES_HOST
+          value: "postgres-service"
+        - name: POSTGRES_PORT
+          value: "{{ .Values.postgresql.service.port }}"
+        - name: JWT_SECRET_KEY
+          value: "{{ .Values.secrets.jwtSecretKey }}"
+        - name: RESTAURANT_SERVICE_URL
+          value: "http://restaurant-service:{{ .Values.restaurantService.service.port }}"
+        resources:
+          limits:
+            cpu: {{ .Values.orderService.resources.limits.cpu }}
+            memory: {{ .Values.orderService.resources.limits.memory }}
+          requests:
+            cpu: {{ .Values.orderService.resources.requests.cpu }}
+            memory: {{ .Values.orderService.resources.requests.memory }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.orderService.service.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.orderService.service.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+{{- end }}

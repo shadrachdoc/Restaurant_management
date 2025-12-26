@@ -1,0 +1,62 @@
+{{- if .Values.customerService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.customerService.name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.customerService.name }}
+    tier: backend
+spec:
+  replicas: {{ .Values.customerService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.customerService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.customerService.name }}
+        tier: backend
+    spec:
+      containers:
+      - name: {{ .Values.customerService.name }}
+        image: "{{ .Values.customerService.image.repository }}:{{ .Values.customerService.image.tag }}"
+        imagePullPolicy: {{ .Values.customerService.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.customerService.service.port }}
+          name: http
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@postgres-service:{{ .Values.postgresql.service.port }}/{{ .Values.postgresql.auth.database }}"
+        - name: POSTGRES_USER
+          value: "{{ .Values.postgresql.auth.username }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ .Values.postgresql.auth.password }}"
+        - name: POSTGRES_DB
+          value: "{{ .Values.postgresql.auth.database }}"
+        - name: POSTGRES_HOST
+          value: "postgres-service"
+        - name: POSTGRES_PORT
+          value: "{{ .Values.postgresql.service.port }}"
+        - name: JWT_SECRET_KEY
+          value: "{{ .Values.secrets.jwtSecretKey }}"
+        resources:
+          limits:
+            cpu: {{ .Values.customerService.resources.limits.cpu }}
+            memory: {{ .Values.customerService.resources.limits.memory }}
+          requests:
+            cpu: {{ .Values.customerService.resources.requests.cpu }}
+            memory: {{ .Values.customerService.resources.requests.memory }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.customerService.service.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.customerService.service.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+{{- end }}
