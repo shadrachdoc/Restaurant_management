@@ -28,8 +28,8 @@ spec:
                 - restaurant-cluster-worker2
       containers:
       - name: frontend
-        image: shadrach85/restaurant-frontend:727cc85
-        imagePullPolicy: Always
+        image: shadrach85/restaurant-frontend:order-tracking-fix
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
           name: http

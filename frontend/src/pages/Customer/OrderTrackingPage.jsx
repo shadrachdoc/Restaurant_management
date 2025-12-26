@@ -18,7 +18,17 @@ const OrderTrackingPage = () => {
         setOrder(response.data);
       } catch (error) {
         console.error('Failed to fetch order:', error);
-        toast.error('Failed to load order details');
+        let errorMessage = 'Failed to load order details';
+
+        if (error.response?.data?.detail) {
+          errorMessage = error.response.data.detail;
+        } else if (error.response?.status === 404) {
+          errorMessage = 'Order not found';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -30,6 +40,9 @@ const OrderTrackingPage = () => {
       // Poll for updates every 5 seconds
       const interval = setInterval(fetchOrder, 5000);
       return () => clearInterval(interval);
+    } else {
+      setLoading(false);
+      toast.error('No order ID provided');
     }
   }, [orderId]);
 
