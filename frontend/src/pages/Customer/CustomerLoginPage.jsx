@@ -31,7 +31,7 @@ const CustomerLoginPage = () => {
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
-        const response = await axios.get('http://localhost:8003/api/v1/restaurants');
+        const response = await axios.get('/api/v1/restaurants');
         setRestaurants(response.data);
       } catch (error) {
         console.error('Failed to fetch restaurants:', error);
@@ -47,7 +47,7 @@ const CustomerLoginPage = () => {
 
     try {
       const response = await axios.post(
-        'http://localhost:8007/api/v1/customers/login',
+        '/api/v1/customers/login',
         loginData
       );
 
@@ -74,7 +74,7 @@ const CustomerLoginPage = () => {
 
     try {
       const response = await axios.post(
-        'http://localhost:8007/api/v1/customers/register',
+        '/api/v1/customers/register',
         registerData
       );
 

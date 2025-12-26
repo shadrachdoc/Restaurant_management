@@ -18,6 +18,7 @@ AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service:8001")
 RESTAURANT_SERVICE_URL = os.getenv("RESTAURANT_SERVICE_URL", "http://restaurant-service:8003")
 ORDER_SERVICE_URL = os.getenv("ORDER_SERVICE_URL", "http://order-service:8004")
 POS_SERVICE_URL = os.getenv("POS_SERVICE_URL", "http://pos-service:8005")  # Future POS service
+CUSTOMER_SERVICE_URL = os.getenv("CUSTOMER_SERVICE_URL", "http://customer-service:8007")
 
 # Rate limiting configuration
 RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))
@@ -96,6 +97,9 @@ async def gateway(
     if path.startswith("api/v1/auth") or path.startswith("api/v1/users"):
         target_url = f"{AUTH_SERVICE_URL}/{path}"
         print(f"DEBUG: Routing to AUTH_SERVICE: {target_url}")
+    elif path.startswith("api/v1/customers"):
+        target_url = f"{CUSTOMER_SERVICE_URL}/{path}"
+        print(f"DEBUG: Routing to CUSTOMER_SERVICE: {target_url}")
     elif path.startswith("api/v1/orders") or path.startswith("api/v1/sessions") or path.startswith("api/v1/assistance"):
         target_url = f"{ORDER_SERVICE_URL}/{path}"
         print(f"DEBUG: Routing to ORDER_SERVICE: {target_url}")
