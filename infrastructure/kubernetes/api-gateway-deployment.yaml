@@ -19,8 +19,8 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: shadrach85/api-gateway:ee31d21
-        imagePullPolicy: Always
+        image: shadrach85/restaurant-api-gateway:fda2e04-customer
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
           name: http
@@ -36,6 +36,8 @@ spec:
           value: "http://restaurant-service:8003"
         - name: ORDER_SERVICE_URL
           value: "http://order-service:8004"
+        - name: CUSTOMER_SERVICE_URL
+          value: "http://customer-service:8007"
         - name: KITCHEN_SERVICE_URL
           value: "http://kitchen-service:8005"
         - name: JWT_SECRET_KEY
