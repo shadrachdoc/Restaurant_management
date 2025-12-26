@@ -20,7 +20,7 @@ spec:
       containers:
       - name: api-gateway
         image: shadrach85/restaurant-api-gateway:uploads-routing
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
           name: http

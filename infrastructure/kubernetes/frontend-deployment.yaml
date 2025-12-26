@@ -28,7 +28,7 @@ spec:
                 - restaurant-cluster-worker2
       containers:
       - name: frontend
-        image: shadrach85/restaurant-frontend:image-upload
+        image: shadrach85/restaurant-frontend:nginx-uploads
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
