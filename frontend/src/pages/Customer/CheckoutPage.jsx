@@ -88,7 +88,7 @@ const CheckoutPage = () => {
       console.log('Placing order:', orderPayload);
 
       const response = await axios.post(
-        'http://localhost:8003/api/v1/orders',
+        '/api/v1/orders',
         orderPayload
       );
 

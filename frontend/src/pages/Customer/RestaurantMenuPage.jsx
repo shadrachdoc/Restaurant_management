@@ -31,13 +31,13 @@ const RestaurantMenuPage = () => {
 
         // Fetch restaurant by slug
         const restaurantRes = await axios.get(
-          `http://localhost:8003/api/v1/restaurants/slug/${restaurantSlug}`
+          `/api/v1/restaurants/slug/${restaurantSlug}`
         );
         setRestaurant(restaurantRes.data);
 
         // Fetch menu items
         const menuRes = await axios.get(
-          `http://localhost:8003/api/v1/restaurants/${restaurantRes.data.id}/menu-items`
+          `/api/v1/restaurants/${restaurantRes.data.id}/menu-items`
         );
 
         // Add restaurant info to each menu item for cart

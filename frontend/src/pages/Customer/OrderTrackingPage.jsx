@@ -14,7 +14,7 @@ const OrderTrackingPage = () => {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const response = await axios.get(`http://localhost:8003/api/v1/orders/${orderId}`);
+        const response = await axios.get(`/api/v1/orders/${orderId}`);
         setOrder(response.data);
       } catch (error) {
         console.error('Failed to fetch order:', error);
