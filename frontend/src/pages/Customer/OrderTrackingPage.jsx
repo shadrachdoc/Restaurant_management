@@ -12,34 +12,44 @@ const OrderTrackingPage = () => {
 
   // Fetch order details
   useEffect(() => {
+    let isMounted = true;
+
     const fetchOrder = async () => {
       try {
         const response = await axios.get(`/api/v1/orders/${orderId}`);
-        setOrder(response.data);
+        if (isMounted) {
+          setOrder(response.data);
+          setLoading(false);
+        }
       } catch (error) {
         console.error('Failed to fetch order:', error);
-        let errorMessage = 'Failed to load order details';
-
-        if (error.response?.data?.detail) {
-          errorMessage = error.response.data.detail;
-        } else if (error.response?.status === 404) {
-          errorMessage = 'Order not found';
-        } else if (error.message) {
-          errorMessage = error.message;
+        if (isMounted) {
+          setLoading(false);
+          // Only show error toast on initial load
+          if (!order) {
+            let errorMessage = 'Failed to load order details';
+            if (error.response?.data?.detail) {
+              errorMessage = error.response.data.detail;
+            } else if (error.response?.status === 404) {
+              errorMessage = 'Order not found';
+            } else if (error.message) {
+              errorMessage = error.message;
+            }
+            toast.error(errorMessage);
+          }
         }
-
-        toast.error(errorMessage);
-      } finally {
-        setLoading(false);
       }
     };
 
     if (orderId) {
       fetchOrder();
 
-      // Poll for updates every 5 seconds
-      const interval = setInterval(fetchOrder, 5000);
-      return () => clearInterval(interval);
+      // Poll for updates every 3 seconds
+      const interval = setInterval(fetchOrder, 3000);
+      return () => {
+        isMounted = false;
+        clearInterval(interval);
+      };
     } else {
       setLoading(false);
       toast.error('No order ID provided');

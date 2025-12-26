@@ -28,7 +28,7 @@ spec:
                 - restaurant-cluster-worker
       containers:
       - name: order-service
-        image: shadrach85/restaurant-order-service:customer-order-fix2
+        image: shadrach85/restaurant-order-service:with-restaurant-slug
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8004

@@ -26,33 +26,45 @@ export default function OrderTracking() {
 
   // Fetch order details
   useEffect(() => {
+    let isMounted = true;
+
     const fetchOrder = async () => {
       try {
         const response = await orderAPI.get(orderId);
-        setOrder(response.data);
+        if (isMounted) {
+          setOrder(response.data);
 
-        // Fetch restaurant and menu items
-        if (response.data.restaurant_id) {
-          const restaurantResponse = await restaurantAPI.get(response.data.restaurant_id);
-          setRestaurant(restaurantResponse.data);
+          // Fetch restaurant and menu items only on initial load
+          if (response.data.restaurant_id && !restaurant) {
+            const restaurantResponse = await restaurantAPI.get(response.data.restaurant_id);
+            setRestaurant(restaurantResponse.data);
 
-          const menuResponse = await menuAPI.list(response.data.restaurant_id);
-          setMenuItems(menuResponse.data.filter(item => item.is_available));
+            const menuResponse = await menuAPI.list(response.data.restaurant_id);
+            setMenuItems(menuResponse.data.filter(item => item.is_available));
+          }
+          setLoading(false);
         }
       } catch (error) {
         console.error('Failed to fetch order:', error);
-        toast.error('Failed to load order details');
-      } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+          // Only show error toast on initial load
+          if (!order) {
+            toast.error('Failed to load order details');
+          }
+        }
       }
     };
 
     if (orderId) {
       fetchOrder();
 
-      // Poll for updates every 5 seconds
-      const interval = setInterval(fetchOrder, 5000);
-      return () => clearInterval(interval);
+      // Poll for updates every 3 seconds
+      const interval = setInterval(fetchOrder, 3000);
+      return () => {
+        isMounted = false;
+        clearInterval(interval);
+      };
     }
   }, [orderId]);
 

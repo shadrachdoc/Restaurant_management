@@ -59,6 +59,7 @@ class OrderResponse(BaseModel):
     """Schema for order response"""
     id: UUID
     restaurant_id: UUID
+    restaurant_slug: Optional[str] = None
     table_id: Optional[UUID] = None
     order_number: str
     status: OrderStatus
