@@ -94,11 +94,11 @@ const CheckoutPage = () => {
 
       toast.success('Order placed successfully!');
 
-      // Clear cart
-      clearCart();
-
-      // Redirect to order tracking
+      // Redirect to order tracking FIRST
       navigate(`/customer/order-tracking/${response.data.id}`);
+
+      // Clear cart AFTER navigation
+      setTimeout(() => clearCart(), 100);
 
     } catch (error) {
       console.error('Order placement failed:', error);

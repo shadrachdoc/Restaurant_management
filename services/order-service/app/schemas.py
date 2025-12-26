@@ -36,10 +36,17 @@ class OrderItemResponse(BaseModel):
 class OrderCreate(BaseModel):
     """Schema for creating an order"""
     restaurant_id: UUID
-    table_id: UUID
+    table_id: Optional[UUID] = None
     items: List[OrderItemCreate] = Field(min_length=1)
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
+    customer_email: Optional[str] = None
+    order_type: Optional[str] = None
+    delivery_address: Optional[str] = None
+    subtotal: Optional[str] = None
+    tax: Optional[str] = None
+    total: Optional[str] = None
+    status: Optional[str] = None
     special_instructions: Optional[str] = None
 
 
@@ -52,19 +59,22 @@ class OrderResponse(BaseModel):
     """Schema for order response"""
     id: UUID
     restaurant_id: UUID
-    table_id: UUID
+    table_id: Optional[UUID] = None
     order_number: str
     status: OrderStatus
-    customer_name: Optional[str]
-    customer_phone: Optional[str]
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
+    customer_email: Optional[str] = None
+    order_type: Optional[str] = None
+    delivery_address: Optional[str] = None
     subtotal: float
     tax: float
     total: float
-    special_instructions: Optional[str]
-    items: List[OrderItemResponse]
+    special_instructions: Optional[str] = None
+    items: List[OrderItemResponse] = []
     created_at: datetime
     updated_at: datetime
-    completed_at: Optional[datetime]
+    completed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
