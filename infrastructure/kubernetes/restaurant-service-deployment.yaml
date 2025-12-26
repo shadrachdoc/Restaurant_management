@@ -29,7 +29,7 @@ spec:
       containers:
       - name: restaurant-service
         image: shadrach85/restaurant-restaurant-service:all-formats
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8003
           name: http
