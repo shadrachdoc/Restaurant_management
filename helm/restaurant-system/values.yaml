@@ -18,8 +18,8 @@ apiGateway:
   name: api-gateway
   replicaCount: 1
   image:
-    repository: shadrach85/restaurant-api-gateway
-    tag: uploads-routing
+    repository: restaurant_management_api-gateway
+    tag: latest
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -77,8 +77,8 @@ restaurantService:
   name: restaurant-service
   replicaCount: 1
   image:
-    repository: shadrach85/restaurant-restaurant-service
-    tag: all-formats
+    repository: restaurant_management_restaurant-service
+    tag: latest
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -103,8 +103,8 @@ orderService:
   name: order-service
   replicaCount: 1
   image:
-    repository: shadrach85/restaurant-order-service
-    tag: with-restaurant-slug
+    repository: restaurant_management_order-service
+    tag: latest
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -129,8 +129,8 @@ customerService:
   name: customer-service
   replicaCount: 1
   image:
-    repository: shadrach85/restaurant-customer-service
-    tag: fda2e04
+    repository: restaurant_management_customer-service
+    tag: latest
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP

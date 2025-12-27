@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { FiUsers, FiEdit2, FiTrash2, FiX, FiPlus, FiLogOut } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axios from '../../services/api';
+import { restaurantAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 
@@ -42,7 +43,7 @@ export default function UserManagement() {
 
   const fetchRestaurants = async () => {
     try {
-      const response = await axios.get('/api/v1/restaurants');
+      const response = await restaurantAPI.list();
       setRestaurants(response.data);
     } catch (error) {
       console.error('Failed to fetch restaurants:', error);

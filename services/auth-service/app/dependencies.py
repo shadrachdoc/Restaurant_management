@@ -20,7 +20,7 @@ async def get_current_user(
     token = credentials.credentials
 
     try:
-        payload = decode_access_token(token)
+        payload = decode_token(token)
         user_id = payload.get("sub")
 
         if user_id is None:
