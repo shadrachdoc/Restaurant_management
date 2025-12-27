@@ -20,7 +20,7 @@ apiGateway:
   image:
     repository: restaurant_management_api-gateway
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Never
   service:
     type: ClusterIP
     port: 8000
@@ -53,7 +53,7 @@ authService:
   image:
     repository: restaurant_management_auth-service
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Never
   service:
     type: ClusterIP
     port: 8001
@@ -79,7 +79,7 @@ restaurantService:
   image:
     repository: restaurant_management_restaurant-service
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Never
   service:
     type: ClusterIP
     port: 8003
@@ -105,7 +105,7 @@ orderService:
   image:
     repository: restaurant_management_order-service
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Never
   service:
     type: ClusterIP
     port: 8004
@@ -134,7 +134,7 @@ customerService:
   image:
     repository: restaurant_management_customer-service
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Never
   service:
     type: ClusterIP
     port: 8007
@@ -160,7 +160,7 @@ frontend:
   image:
     repository: restaurant_management_frontend
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Never
   service:
     type: ClusterIP
     port: 80
