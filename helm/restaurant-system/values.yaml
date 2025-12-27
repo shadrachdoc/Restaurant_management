@@ -155,8 +155,8 @@ frontend:
   name: frontend
   replicaCount: 1
   image:
-    repository: shadrach85/restaurant-frontend
-    tag: realtime-polling
+    repository: restaurant_management_frontend
+    tag: latest
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
