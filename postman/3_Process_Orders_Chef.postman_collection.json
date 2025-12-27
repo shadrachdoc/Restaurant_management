@@ -49,7 +49,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"username\": \"adminchef@restaurant.com\",\n  \"password\": \"admin123\"\n}"
+          "raw": "{\n  \"username\": \"adminchef\",\n  \"password\": \"password\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/v1/auth/login",
@@ -130,11 +130,13 @@
               "",
               "if (shouldCancel) {",
               "    pm.environment.set('order_action', 'cancel');",
+              "    pm.environment.set('order_status', 'cancelled');",
               "    console.log(`${processedCount + 1}/${totalOrders}: ❌ Cancelling order ${currentOrderId}`);",
               "} else {",
               "    // Workflow: PENDING → CONFIRMED → PREPARING → READY → SERVED",
               "    // We'll do this in one request by setting final status",
               "    pm.environment.set('order_action', 'complete');",
+              "    pm.environment.set('order_status', 'served');",
               "    console.log(`${processedCount + 1}/${totalOrders}: ✓ Completing order ${currentOrderId}`);",
               "}"
             ],
@@ -172,7 +174,7 @@
         }
       ],
       "request": {
-        "method": "PUT",
+        "method": "PATCH",
         "header": [
           {
             "key": "Content-Type",
@@ -185,7 +187,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"status\": \"{{#if (eq order_action 'cancel')}}CANCELLED{{else}}SERVED{{/if}}\"\n}"
+          "raw": "{\n  \"status\": \"{{order_status}}\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/v1/orders/{{current_order_id}}/status",

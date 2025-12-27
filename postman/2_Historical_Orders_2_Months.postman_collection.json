@@ -42,7 +42,7 @@
         "url": {
           "raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items",
           "host": ["{{base_url}}"],
-          "path": ["api", "v1", "restaurants", "{{restaurant_id}}", "menu"]
+          "path": ["api", "v1", "restaurants", "{{restaurant_id}}", "menu-items"]
         }
       }
     },
@@ -98,22 +98,25 @@
               "",
               "pm.environment.set('customer_name', customerName);",
               "pm.environment.set('customer_phone', customerPhone);",
-              "pm.environment.set('customer_email', customerEmail || '');",
               "",
-              "// Table ID for table orders",
-              "if (!isOnlineOrder) {",
-              "    pm.environment.set('table_id', `Table-${Math.floor(Math.random() * 30) + 1}`);",
+              "// Set customer_email (null or string)",
+              "if (customerEmail) {",
+              "    pm.environment.set('customer_email', JSON.stringify(customerEmail));",
               "} else {",
-              "    pm.environment.set('table_id', '');",
+              "    pm.environment.set('customer_email', 'null');",
               "}",
+              "",
+              "// Table ID - always null for now",
+              "pm.environment.set('table_id', 'null');",
               "",
               "// Delivery address for online orders",
               "if (isOnlineOrder) {",
               "    const streets = ['Main St', 'Oak Ave', 'Elm St', 'Pine Rd', 'Maple Dr', 'Cedar Ln', 'Birch Way'];",
               "    const cities = ['Springfield', 'Riverside', 'Oakland', 'Fairview', 'Georgetown'];",
-              "    pm.environment.set('delivery_address', `${Math.floor(Math.random() * 999) + 1} ${streets[Math.floor(Math.random() * streets.length)]}, ${cities[Math.floor(Math.random() * cities.length)]}`);",
+              "    const address = `${Math.floor(Math.random() * 999) + 1} ${streets[Math.floor(Math.random() * streets.length)]}, ${cities[Math.floor(Math.random() * cities.length)]}`;",
+              "    pm.environment.set('delivery_address', JSON.stringify(address));",
               "} else {",
-              "    pm.environment.set('delivery_address', '');",
+              "    pm.environment.set('delivery_address', 'null');",
               "}",
               "",
               "// Select menu items",
@@ -197,7 +200,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"restaurant_id\": \"{{restaurant_id}}\",\n  \"customer_name\": \"{{customer_name}}\",\n  \"customer_phone\": \"{{customer_phone}}\",\n  \"customer_email\": \"{{customer_email}}\",\n  \"order_type\": \"{{order_type}}\",\n  \"table_id\": \"{{table_id}}\",\n  \"delivery_address\": \"{{delivery_address}}\",\n  \"items\": {{order_items}}\n}"
+          "raw": "{\n  \"restaurant_id\": \"{{restaurant_id}}\",\n  \"customer_name\": \"{{customer_name}}\",\n  \"customer_phone\": \"{{customer_phone}}\",\n  \"customer_email\": {{customer_email}},\n  \"order_type\": \"{{order_type}}\",\n  \"table_id\": {{table_id}},\n  \"delivery_address\": {{delivery_address}},\n  \"items\": {{order_items}}\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/v1/orders",

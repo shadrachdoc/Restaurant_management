@@ -56,7 +56,7 @@
         "url": {
           "raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items",
           "host": ["{{base_url}}"],
-          "path": ["api", "v1", "restaurants", "{{restaurant_id}}", "menu"]
+          "path": ["api", "v1", "restaurants", "{{restaurant_id}}", "menu-items"]
         }
       }
     },

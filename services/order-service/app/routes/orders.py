@@ -19,7 +19,7 @@ from ..schemas import (
     OrderUpdateStatus,
     MessageResponse
 )
-from shared.models.enums import OrderStatus
+from shared.models.enums import OrderStatus, OrderType
 from shared.utils.logger import setup_logger
 
 router = APIRouter()
@@ -119,8 +119,11 @@ async def create_order(
         table_id=order_data.table_id,
         order_number=generate_order_number(),
         status=OrderStatus.PENDING,
+        order_type=order_data.order_type if order_data.order_type else OrderType.TABLE,
         customer_name=order_data.customer_name,
         customer_phone=order_data.customer_phone,
+        customer_email=order_data.customer_email,
+        delivery_address=order_data.delivery_address,
         subtotal=subtotal,
         tax=tax,
         total=total,

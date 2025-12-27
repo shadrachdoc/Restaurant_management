@@ -49,7 +49,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"username\": \"adminres@restaurant.com\",\n  \"password\": \"admin123\"\n}"
+          "raw": "{\n  \"username\": \"adminres\",\n  \"password\": \"password\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/v1/auth/login",
@@ -193,9 +193,9 @@
           "raw": "{\n  \"name\": \"{{item_name}}\",\n  \"description\": \"{{item_description}}\",\n  \"price\": {{item_price}},\n  \"category\": \"{{item_category}}\",\n  \"available\": {{item_available}},\n  \"image_url\": \"https://via.placeholder.com/300\"\n}"
         },
         "url": {
-          "raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items-items",
+          "raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items",
           "host": ["{{base_url}}"],
-          "path": ["api", "v1", "restaurants", "{{restaurant_id}}", "menu"]
+          "path": ["api", "v1", "restaurants", "{{restaurant_id}}", "menu-items"]
         }
       }
     }
