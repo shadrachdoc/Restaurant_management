@@ -4,7 +4,78 @@ This directory contains all Postman collections and environments for the Restaur
 
 ## Collections Overview
 
-### 1. **Restaurant_Load_Test.postman_collection.json** (NEW - Load Testing)
+### ML Testing Collections (NEW - For Prediction Testing)
+
+#### 1. **1_Menu_Setup.postman_collection.json** (Run Once)
+**Purpose:** Create 50 diverse menu items across all categories
+
+**Use Cases:**
+- One-time setup for realistic menu
+- Testing menu management
+- Populating restaurant with varied items
+
+**Contains:**
+- 10 Appetizers ($6-$13)
+- 15 Main Courses ($14-$32)
+- 10 Side Dishes ($4-$8)
+- 8 Desserts ($6-$9)
+- 7 Beverages ($3-$6)
+
+**How to Use:**
+- Login as admin → Collection Runner → 50 iterations
+- Creates complete restaurant menu in one run
+
+---
+
+#### 2. **2_Historical_Orders_2_Months.postman_collection.json** (Single Run - 200 Orders)
+**Purpose:** Generate 2 months of historical orders with weekend peaks for ML testing
+
+**Use Cases:**
+- ML prediction algorithm testing
+- Time-series analytics validation
+- Weekend vs weekday pattern analysis
+- Revenue trend visualization
+
+**Key Features:**
+- 200 orders spread over 60 days
+- Friday/Saturday peaks (2-3x normal days)
+- 50% table orders, 50% online orders
+- Multiple items per order (weekends larger)
+- Different customers per order
+- Automatic date distribution
+
+**How to Use:**
+- Run Setup to load menu → Collection Runner → 200 iterations
+- Then run SQL script to backdate orders
+- See [ML_TESTING_GUIDE.md](./ML_TESTING_GUIDE.md)
+
+---
+
+#### 3. **3_Process_Orders_Chef.postman_collection.json** (Chef Workflow)
+**Purpose:** Chef accepts and completes all orders with 10 cancellations
+
+**Use Cases:**
+- Simulating chef order processing
+- Testing order status workflow
+- Revenue calculation validation
+- Dashboard data population
+
+**Workflow:**
+- Fetch all pending orders
+- Process each: PENDING → SERVED (or CANCELLED)
+- 10 orders cancelled (spread evenly)
+- 190 orders completed
+- Revenue automatically updated
+
+**How to Use:**
+- Login as chef → Get pending orders → Collection Runner
+- Processes all orders automatically
+
+---
+
+### Load Testing Collection
+
+#### 4. **Restaurant_Load_Test.postman_collection.json** (Bulk Load Testing)
 **Purpose:** Generate bulk test data - 150 online orders + 100 table orders
 
 **Use Cases:**

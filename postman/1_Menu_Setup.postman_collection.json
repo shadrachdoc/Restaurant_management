@@ -1,0 +1,214 @@
+{
+  "info": {
+    "name": "1. Menu Setup - 50 Items",
+    "description": "Creates 50 diverse menu items: Appetizers, Main Course, Side Dishes, Desserts, Beverages",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "restaurant_id",
+      "value": "73332393-3c58-47c1-b58e-6d2ab59e96bb",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup - Login as Restaurant Admin",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const response = pm.response.json();",
+              "if (response && response.access_token) {",
+              "    pm.environment.set('admin_token', response.access_token);",
+              "    console.log('✓ Admin logged in successfully');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "username",
+              "value": "adminres@restaurant.com",
+              "type": "text"
+            },
+            {
+              "key": "password",
+              "value": "admin123",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "Create Menu Item",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Menu database with realistic items",
+              "const menuDatabase = {",
+              "    'APPETIZER': [",
+              "        { name: 'Spring Rolls', price: 8, desc: 'Crispy vegetable spring rolls with sweet chili sauce' },",
+              "        { name: 'Chicken Wings', price: 12, desc: 'Buffalo style wings with ranch dressing' },",
+              "        { name: 'Mozzarella Sticks', price: 9, desc: 'Golden fried mozzarella with marinara' },",
+              "        { name: 'Bruschetta', price: 10, desc: 'Toasted bread with tomatoes, basil, olive oil' },",
+              "        { name: 'Samosas', price: 7, desc: 'Spiced potato and pea pastry triangles' },",
+              "        { name: 'Garlic Bread', price: 6, desc: 'Toasted baguette with garlic butter' },",
+              "        { name: 'Nachos Supreme', price: 11, desc: 'Tortilla chips with cheese, salsa, guacamole' },",
+              "        { name: 'Calamari Rings', price: 13, desc: 'Lightly battered squid with lemon aioli' },",
+              "        { name: 'Hummus Platter', price: 9, desc: 'Chickpea dip with pita bread and veggies' },",
+              "        { name: 'Caprese Salad', price: 10, desc: 'Fresh mozzarella, tomato, basil, balsamic' }",
+              "    ],",
+              "    'MAIN_COURSE': [",
+              "        { name: 'Grilled Salmon', price: 24, desc: 'Atlantic salmon with lemon butter sauce' },",
+              "        { name: 'Chicken Tikka Masala', price: 18, desc: 'Tender chicken in creamy tomato curry' },",
+              "        { name: 'Beef Burger Deluxe', price: 16, desc: 'Angus beef patty with cheese, lettuce, tomato' },",
+              "        { name: 'Spaghetti Carbonara', price: 17, desc: 'Pasta with bacon, egg, parmesan cream' },",
+              "        { name: 'Fish and Chips', price: 19, desc: 'Beer-battered cod with crispy fries' },",
+              "        { name: 'Lamb Biryani', price: 22, desc: 'Aromatic rice with spiced lamb' },",
+              "        { name: 'Vegetable Stir Fry', price: 15, desc: 'Seasonal vegetables in teriyaki sauce' },",
+              "        { name: 'BBQ Ribs', price: 26, desc: 'Slow-cooked pork ribs with BBQ sauce' },",
+              "        { name: 'Chicken Parmesan', price: 20, desc: 'Breaded chicken with marinara and cheese' },",
+              "        { name: 'Shrimp Scampi', price: 23, desc: 'Garlic butter shrimp over linguine' },",
+              "        { name: 'Butter Chicken', price: 19, desc: 'Chicken in rich tomato butter sauce' },",
+              "        { name: 'Grilled Ribeye Steak', price: 32, desc: '12oz ribeye with herb butter' },",
+              "        { name: 'Pad Thai', price: 16, desc: 'Thai rice noodles with shrimp and peanuts' },",
+              "        { name: 'Margherita Pizza', price: 14, desc: 'Classic tomato, mozzarella, basil pizza' },",
+              "        { name: 'Teriyaki Chicken Bowl', price: 17, desc: 'Grilled chicken over rice with vegetables' }",
+              "    ],",
+              "    'SIDE_DISH': [",
+              "        { name: 'French Fries', price: 5, desc: 'Crispy golden fries' },",
+              "        { name: 'Mashed Potatoes', price: 6, desc: 'Creamy mashed potatoes with gravy' },",
+              "        { name: 'Steamed Rice', price: 4, desc: 'Jasmine rice' },",
+              "        { name: 'Garlic Naan', price: 4, desc: 'Indian flatbread with garlic' },",
+              "        { name: 'Caesar Salad', price: 8, desc: 'Romaine lettuce with Caesar dressing' },",
+              "        { name: 'Coleslaw', price: 5, desc: 'Shredded cabbage in creamy dressing' },",
+              "        { name: 'Onion Rings', price: 6, desc: 'Crispy battered onion rings' },",
+              "        { name: 'Mac and Cheese', price: 7, desc: 'Creamy macaroni and cheese' },",
+              "        { name: 'Grilled Vegetables', price: 7, desc: 'Seasonal grilled veggies' },",
+              "        { name: 'Sweet Potato Fries', price: 6, desc: 'Crispy sweet potato fries' }",
+              "    ],",
+              "    'DESSERT': [",
+              "        { name: 'Chocolate Lava Cake', price: 9, desc: 'Warm chocolate cake with molten center' },",
+              "        { name: 'Tiramisu', price: 8, desc: 'Italian coffee-soaked ladyfinger dessert' },",
+              "        { name: 'Cheesecake', price: 8, desc: 'New York style cheesecake' },",
+              "        { name: 'Ice Cream Sundae', price: 7, desc: 'Vanilla ice cream with toppings' },",
+              "        { name: 'Apple Pie', price: 7, desc: 'Classic apple pie with vanilla ice cream' },",
+              "        { name: 'Brownie', price: 6, desc: 'Fudge brownie with chocolate sauce' },",
+              "        { name: 'Panna Cotta', price: 8, desc: 'Italian cream dessert with berry compote' },",
+              "        { name: 'Crème Brûlée', price: 9, desc: 'Custard with caramelized sugar top' }",
+              "    ],",
+              "    'BEVERAGE': [",
+              "        { name: 'Fresh Orange Juice', price: 5, desc: 'Freshly squeezed orange juice' },",
+              "        { name: 'Iced Tea', price: 4, desc: 'Sweet or unsweetened' },",
+              "        { name: 'Coffee', price: 3, desc: 'Hot brewed coffee' },",
+              "        { name: 'Cappuccino', price: 5, desc: 'Espresso with steamed milk foam' },",
+              "        { name: 'Smoothie', price: 6, desc: 'Mixed berry smoothie' },",
+              "        { name: 'Milkshake', price: 6, desc: 'Chocolate, vanilla, or strawberry' },",
+              "        { name: 'Lemonade', price: 4, desc: 'Fresh homemade lemonade' }",
+              "    ]",
+              "};",
+              "",
+              "// Get current iteration",
+              "const iteration = parseInt(pm.environment.get('iteration') || '0');",
+              "",
+              "// Flatten all items with category",
+              "const allItems = [];",
+              "Object.keys(menuDatabase).forEach(category => {",
+              "    menuDatabase[category].forEach(item => {",
+              "        allItems.push({ ...item, category });",
+              "    });",
+              "});",
+              "",
+              "// Select item based on iteration",
+              "if (iteration < allItems.length) {",
+              "    const item = allItems[iteration];",
+              "    pm.environment.set('item_name', item.name);",
+              "    pm.environment.set('item_price', item.price);",
+              "    pm.environment.set('item_description', item.desc);",
+              "    pm.environment.set('item_category', item.category);",
+              "    pm.environment.set('item_available', true);",
+              "    ",
+              "    console.log(`Creating ${iteration + 1}/50: ${item.name} (${item.category}) - $${item.price}`);",
+              "} else {",
+              "    console.log('All 50 items created!');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200 || pm.response.code === 201) {",
+              "    const item = pm.environment.get('item_name');",
+              "    console.log(`✓ Created: ${item}`);",
+              "    ",
+              "    // Increment iteration",
+              "    const iteration = parseInt(pm.environment.get('iteration') || '0');",
+              "    pm.environment.set('iteration', (iteration + 1).toString());",
+              "} else {",
+              "    console.log('Error:', pm.response.text());",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{item_name}}\",\n  \"description\": \"{{item_description}}\",\n  \"price\": {{item_price}},\n  \"category\": \"{{item_category}}\",\n  \"available\": {{item_available}},\n  \"image_url\": \"https://via.placeholder.com/300\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "restaurants", "{{restaurant_id}}", "menu"]
+        }
+      }
+    }
+  ]
+}
