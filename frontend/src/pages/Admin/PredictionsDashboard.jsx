@@ -16,7 +16,8 @@ const PredictionsDashboard = () => {
   const [viewMode, setViewMode] = useState('calendar'); // calendar, chart, table
 
   // Get restaurant ID from context/auth (placeholder)
-  const restaurantId = localStorage.getItem('restaurantId') || 'your-restaurant-id';
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const restaurantId = user.restaurant_id || 'your-restaurant-id';
 
   // Fetch available data on mount
   useEffect(() => {

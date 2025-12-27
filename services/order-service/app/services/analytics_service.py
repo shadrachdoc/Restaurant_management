@@ -51,8 +51,8 @@ async def get_revenue_analytics(
             AVG(o.total) as avg_order_value
         FROM orders o
         WHERE o.restaurant_id = :restaurant_id
-            AND o.created_at >= :start_date
-            AND o.created_at < :end_date + INTERVAL '1 day'
+            AND DATE(o.created_at) >= CAST(:start_date AS DATE)
+            AND DATE(o.created_at) <= :end_date
             AND o.status NOT IN ('CANCELLED')
         GROUP BY DATE_TRUNC(:trunc_format, o.created_at)
         ORDER BY period ASC
@@ -300,8 +300,8 @@ async def get_order_volume(
             AVG(o.total) as avg_order_value
         FROM orders o
         WHERE o.restaurant_id = :restaurant_id
-            AND o.created_at >= :start_date
-            AND o.created_at < :end_date + INTERVAL '1 day'
+            AND DATE(o.created_at) >= CAST(:start_date AS DATE)
+            AND DATE(o.created_at) <= CAST(:end_date AS DATE)
             AND o.status NOT IN ('CANCELLED')
         GROUP BY DATE_TRUNC(:trunc_format, o.created_at)
         ORDER BY period ASC
@@ -368,8 +368,8 @@ async def get_category_performance(
         FROM order_items oi
         JOIN orders o ON oi.order_id = o.id
         WHERE o.restaurant_id = :restaurant_id
-            AND o.created_at >= :start_date
-            AND o.created_at < :end_date + INTERVAL '1 day'
+            AND DATE(o.created_at) >= CAST(:start_date AS DATE)
+            AND DATE(o.created_at) <= CAST(:end_date AS DATE)
             AND o.status NOT IN ('CANCELLED')
         GROUP BY category
     """)
@@ -417,8 +417,8 @@ async def get_peak_hours(
             SUM(o.total) as revenue
         FROM orders o
         WHERE o.restaurant_id = :restaurant_id
-            AND o.created_at >= :start_date
-            AND o.created_at < :end_date + INTERVAL '1 day'
+            AND DATE(o.created_at) >= CAST(:start_date AS DATE)
+            AND DATE(o.created_at) <= CAST(:end_date AS DATE)
             AND o.status NOT IN ('CANCELLED')
         GROUP BY EXTRACT(HOUR FROM o.created_at)
         ORDER BY hour
@@ -591,8 +591,8 @@ async def get_top_performers(
         FROM order_items oi
         JOIN orders o ON oi.order_id = o.id
         WHERE o.restaurant_id = :restaurant_id
-            AND o.created_at >= :start_date
-            AND o.created_at < :end_date + INTERVAL '1 day'
+            AND DATE(o.created_at) >= CAST(:start_date AS DATE)
+            AND DATE(o.created_at) <= CAST(:end_date AS DATE)
             AND o.status NOT IN ('CANCELLED')
         GROUP BY oi.menu_item_id, oi.item_name
         ORDER BY {order_by}
@@ -646,8 +646,8 @@ async def get_order_type_breakdown(
                 COUNT(id) as total_orders
             FROM orders
             WHERE restaurant_id = :restaurant_id
-                AND created_at >= :start_date
-                AND created_at < :end_date + INTERVAL '1 day'
+                AND created_at >= CAST(:start_date AS DATE)
+                AND created_at <= CAST(:end_date AS DATE)
                 AND status NOT IN ('CANCELLED')
         )
         SELECT
@@ -658,8 +658,8 @@ async def get_order_type_breakdown(
             (SUM(o.total) / t.total_revenue * 100) as percentage
         FROM orders o, totals t
         WHERE o.restaurant_id = :restaurant_id
-            AND o.created_at >= :start_date
-            AND o.created_at < :end_date + INTERVAL '1 day'
+            AND DATE(o.created_at) >= CAST(:start_date AS DATE)
+            AND DATE(o.created_at) <= CAST(:end_date AS DATE)
             AND o.status NOT IN ('CANCELLED')
         GROUP BY o.order_type, t.total_revenue
     """)
@@ -705,15 +705,15 @@ async def get_customer_behavior(
                 MIN(created_at) as first_order
             FROM orders
             WHERE restaurant_id = :restaurant_id
-                AND created_at >= :start_date
-                AND created_at < :end_date + INTERVAL '1 day'
+                AND created_at >= CAST(:start_date AS DATE)
+                AND created_at <= CAST(:end_date AS DATE)
                 AND status NOT IN ('CANCELLED')
                 AND (customer_id IS NOT NULL OR customer_email IS NOT NULL OR customer_phone IS NOT NULL)
             GROUP BY COALESCE(customer_id::text, customer_email, customer_phone)
         )
         SELECT
             COUNT(DISTINCT customer_identifier) as total_customers,
-            COUNT(CASE WHEN first_order >= :start_date THEN 1 END) as new_customers,
+            COUNT(CASE WHEN first_order >= CAST(:start_date AS DATE) THEN 1 END) as new_customers,
             COUNT(CASE WHEN first_order < :start_date THEN 1 END) as returning_customers,
             AVG(order_count) as avg_orders_per_customer,
             AVG(total_spent) as avg_lifetime_value

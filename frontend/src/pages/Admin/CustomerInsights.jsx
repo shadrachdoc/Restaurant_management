@@ -13,7 +13,8 @@ const CustomerInsights = () => {
   const [error, setError] = useState(null);
 
   // Get restaurant ID from context/auth (placeholder)
-  const restaurantId = localStorage.getItem('restaurantId') || 'your-restaurant-id';
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const restaurantId = user.restaurant_id || 'your-restaurant-id';
 
   // Search for customer
   const handleSearch = async (e) => {

@@ -529,3 +529,97 @@ async def get_customer_behavior(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch customer behavior: {str(e)}"
         )
+
+
+# ============================================================================
+# 13. Analytics Dashboard Summary
+# ============================================================================
+
+@router.get(
+    "/restaurants/{restaurant_id}/analytics",
+    summary="Get analytics dashboard summary",
+    description="Get a comprehensive analytics summary for the dashboard"
+)
+async def get_analytics_dashboard(
+    restaurant_id: UUID,
+    days: int = Query(30, ge=7, le=90, description="Number of days to analyze"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get comprehensive analytics summary for dashboard.
+
+    **Parameters:**
+    - **restaurant_id**: Restaurant UUID
+    - **days**: Number of days to analyze (7-90, default 30)
+
+    **Returns:** Dashboard summary with key metrics
+    """
+    try:
+        from datetime import datetime, timedelta
+
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=days)
+
+        # Get revenue analytics
+        revenue_data = await analytics_service.get_revenue_analytics(
+            db, restaurant_id, start_date, end_date, "daily"
+        )
+
+        # Get popular items
+        popular_items_data = await analytics_service.get_popular_items(
+            db, restaurant_id, days, 10
+        )
+
+        # Get day patterns
+        weeks = min(days // 7, 8)
+        day_patterns_data = await analytics_service.get_day_patterns(
+            db, restaurant_id, weeks
+        )
+
+        # Get order volume
+        order_volume_data = await analytics_service.get_order_volume(
+            db, restaurant_id, start_date, end_date, "daily"
+        )
+
+        # Get customer behavior
+        customer_behavior_data = await analytics_service.get_customer_behavior(
+            db, restaurant_id, start_date, end_date
+        )
+
+        # Calculate summary metrics
+        total_revenue = revenue_data.get("total_revenue", 0)
+        total_orders = revenue_data.get("total_orders", 0)
+        avg_order_value = revenue_data.get("overall_avg_order_value", 0)
+
+        # Get growth from order volume
+        periods = order_volume_data.get("periods", [])
+        recent_growth = 0
+        if len(periods) >= 2:
+            recent_count = periods[-1]["order_count"]
+            previous_count = periods[-2]["order_count"]
+            if previous_count > 0:
+                recent_growth = round(((recent_count - previous_count) / previous_count) * 100, 2)
+
+        return {
+            "period": {
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+                "days": days
+            },
+            "summary": {
+                "total_revenue": total_revenue,
+                "total_orders": total_orders,
+                "avg_order_value": avg_order_value,
+                "recent_growth_rate": recent_growth,
+                "total_customers": customer_behavior_data.get("total_customers", 0)
+            },
+            "popular_items": popular_items_data[:5],  # Top 5
+            "day_patterns": day_patterns_data,
+            "revenue_trend": revenue_data.get("metrics", [])[-7:] if revenue_data.get("metrics") else []  # Last 7 days
+        }
+    except Exception as e:
+        logger.error(f"Analytics dashboard error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch analytics dashboard: {str(e)}"
+        )

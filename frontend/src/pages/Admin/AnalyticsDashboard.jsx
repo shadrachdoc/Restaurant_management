@@ -35,8 +35,9 @@ const AnalyticsDashboard = () => {
   const [orderTypeBreakdown, setOrderTypeBreakdown] = useState([]);
   const [customerBehavior, setCustomerBehavior] = useState(null);
 
-  // Get restaurant ID from context/auth (placeholder)
-  const restaurantId = localStorage.getItem('restaurantId') || 'your-restaurant-id';
+  // Get restaurant ID from authenticated user
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const restaurantId = user.restaurant_id || 'your-restaurant-id';
 
   // Default date range (last 30 days)
   function getDefaultStartDate() {
