@@ -19,8 +19,8 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: restaurant_management_auth-service:latest
-        imagePullPolicy: IfNotPresent
+        image: shadrach85/auth-service:857537d
+        imagePullPolicy: Always
         ports:
         - containerPort: 8001
           name: http
