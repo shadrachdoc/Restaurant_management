@@ -1,27 +1,27 @@
-{{- if .Values.authService.enabled }}
+{{- if .Values.orderService.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.authService.name }}
+  name: {{ .Values.orderService.name }}
   namespace: {{ .Values.namespace }}
   labels:
-    app: {{ .Values.authService.name }}
+    app: {{ .Values.orderService.name }}
 spec:
-  replicas: {{ .Values.authService.replicaCount }}
+  replicas: {{ .Values.orderService.replicaCount }}
   selector:
     matchLabels:
-      app: {{ .Values.authService.name }}
+      app: {{ .Values.orderService.name }}
   template:
     metadata:
       labels:
-        app: {{ .Values.authService.name }}
+        app: {{ .Values.orderService.name }}
     spec:
       containers:
-      - name: auth-service
-        image: "{{ .Values.authService.image.repository }}:{{ .Values.authService.image.tag }}"
-        imagePullPolicy: {{ .Values.authService.image.pullPolicy }}
+      - name: order-service
+        image: "{{ .Values.orderService.image.repository }}:{{ .Values.orderService.image.tag }}"
+        imagePullPolicy: {{ .Values.orderService.image.pullPolicy }}
         ports:
-        - containerPort: {{ .Values.authService.service.port }}
+        - containerPort: {{ .Values.orderService.service.port }}
           name: http
         env:
         - name: POSTGRES_USER
@@ -49,11 +49,6 @@ spec:
             configMapKeyRef:
               name: restaurant-config
               key: REDIS_HOST
-        - name: REDIS_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: restaurant-config
-              key: REDIS_PORT
         - name: RABBITMQ_HOST
           valueFrom:
             configMapKeyRef:
@@ -79,16 +74,6 @@ spec:
             secretKeyRef:
               name: restaurant-secrets
               key: SESSION_SECRET
-        - name: JWT_ALGORITHM
-          valueFrom:
-            configMapKeyRef:
-              name: restaurant-config
-              key: JWT_ALGORITHM
-        - name: ACCESS_TOKEN_EXPIRE_MINUTES
-          valueFrom:
-            configMapKeyRef:
-              name: restaurant-config
-              key: ACCESS_TOKEN_EXPIRE_MINUTES
         - name: ENVIRONMENT
           valueFrom:
             configMapKeyRef:
@@ -99,8 +84,13 @@ spec:
             configMapKeyRef:
               name: restaurant-config
               key: LOG_LEVEL
+        - name: RESTAURANT_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: RESTAURANT_SERVICE_URL
         resources:
-          {{- toYaml .Values.authService.resources | nindent 10 }}
+          {{- toYaml .Values.orderService.resources | nindent 10 }}
         livenessProbe:
           httpGet:
             path: /health

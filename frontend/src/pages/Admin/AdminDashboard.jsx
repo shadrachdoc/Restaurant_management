@@ -180,6 +180,34 @@ export default function AdminDashboard() {
                 </Link>
               </div>
             </div>
+
+            {/* Analytics & Reports */}
+            <div className="bg-white rounded-xl shadow-md p-6 mt-6">
+              <h2 className="text-xl font-bold mb-4">Analytics & Reports</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Link
+                  to="/admin/analytics"
+                  className="block p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all"
+                >
+                  <p className="font-semibold text-gray-900">📊 Analytics Dashboard</p>
+                  <p className="text-sm text-gray-600 mt-1">View sales trends and performance</p>
+                </Link>
+                <Link
+                  to="/admin/predictions"
+                  className="block p-4 border-2 border-gray-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-all"
+                >
+                  <p className="font-semibold text-gray-900">🔮 Demand Predictions</p>
+                  <p className="text-sm text-gray-600 mt-1">AI-powered demand forecasting</p>
+                </Link>
+                <Link
+                  to="/admin/customer-insights"
+                  className="block p-4 border-2 border-gray-200 rounded-lg hover:border-pink-500 hover:bg-pink-50 transition-all"
+                >
+                  <p className="font-semibold text-gray-900">👥 Customer Insights</p>
+                  <p className="text-sm text-gray-600 mt-1">Track preferences & recommendations</p>
+                </Link>
+              </div>
+            </div>
           </>
         )}
       </div>

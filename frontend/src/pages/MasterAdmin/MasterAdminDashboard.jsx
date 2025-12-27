@@ -177,6 +177,27 @@ export default function MasterAdminDashboard() {
           })}
         </div>
 
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <button
+            onClick={() => navigate('/master-admin/users')}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl shadow-lg p-8 transition-all transform hover:scale-105"
+          >
+            <FiUsers className="text-5xl mb-4" />
+            <h3 className="text-2xl font-bold mb-2">Manage Users</h3>
+            <p className="text-blue-100">Create users and assign them to restaurants</p>
+          </button>
+
+          <button
+            onClick={handleCreate}
+            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-xl shadow-lg p-8 transition-all transform hover:scale-105"
+          >
+            <FiPlus className="text-5xl mb-4" />
+            <h3 className="text-2xl font-bold mb-2">Create Restaurant</h3>
+            <p className="text-green-100">Add a new restaurant to the system</p>
+          </button>
+        </div>
+
         {/* Restaurants List */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <div className="flex justify-between items-center mb-6">

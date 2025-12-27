@@ -2,9 +2,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies for Python, PostgreSQL, and Prophet (ML)
 RUN apt-get update && apt-get install -y \
     gcc \
+    g++ \
+    make \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
@@ -16,6 +18,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy shared modules
 COPY shared/ /app/shared/
+
+# Copy Alembic migration files
+COPY services/order-service/alembic.ini /app/
+COPY services/order-service/alembic /app/alembic
 
 # Copy service code
 COPY services/order-service/app /app/app

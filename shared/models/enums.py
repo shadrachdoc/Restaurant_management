@@ -73,3 +73,9 @@ class PaymentStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     REFUNDED = "refunded"
+
+
+class OrderType(str, Enum):
+    """Order channel type - table vs online"""
+    TABLE = "table"      # In-restaurant table orders
+    ONLINE = "online"    # Online delivery/pickup orders
