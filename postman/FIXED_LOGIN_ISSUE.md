@@ -66,12 +66,22 @@ All collections now use correct password: `password`
 - Password: `password`
 - Email: chef@restaurant.com
 
+### 4. Fixed API Endpoints
+
+**Menu Items:**
+- Changed `/menu` to `/menu-items` in all collections
+- Correct endpoint: `/api/v1/restaurants/{restaurant_id}/menu-items`
+
+**Category Enum:**
+- Changed uppercase (`APPETIZER`) to lowercase (`appetizer`)
+- Valid categories: `appetizer`, `main_course`, `dessert`, `beverage`, `side_dish`, `special`
+
 ## Collections Fixed
 
-✅ `1_Menu_Setup.postman_collection.json`
-✅ `2_Historical_Orders_2_Months.postman_collection.json`
-✅ `3_Process_Orders_Chef.postman_collection.json`
-✅ `Restaurant_Load_Test.postman_collection.json`
+✅ `1_Menu_Setup.postman_collection.json` - Login, endpoint, categories
+✅ `2_Historical_Orders_2_Months.postman_collection.json` - Endpoints
+✅ `3_Process_Orders_Chef.postman_collection.json` - Login
+✅ `Restaurant_Load_Test.postman_collection.json` - Login, endpoints
 
 ## Testing Verification
 

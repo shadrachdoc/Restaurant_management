@@ -67,7 +67,7 @@
             "exec": [
               "// Menu database with realistic items",
               "const menuDatabase = {",
-              "    'APPETIZER': [",
+              "    'appetizer': [",
               "        { name: 'Spring Rolls', price: 8, desc: 'Crispy vegetable spring rolls with sweet chili sauce' },",
               "        { name: 'Chicken Wings', price: 12, desc: 'Buffalo style wings with ranch dressing' },",
               "        { name: 'Mozzarella Sticks', price: 9, desc: 'Golden fried mozzarella with marinara' },",
@@ -79,7 +79,7 @@
               "        { name: 'Hummus Platter', price: 9, desc: 'Chickpea dip with pita bread and veggies' },",
               "        { name: 'Caprese Salad', price: 10, desc: 'Fresh mozzarella, tomato, basil, balsamic' }",
               "    ],",
-              "    'MAIN_COURSE': [",
+              "    'main_course': [",
               "        { name: 'Grilled Salmon', price: 24, desc: 'Atlantic salmon with lemon butter sauce' },",
               "        { name: 'Chicken Tikka Masala', price: 18, desc: 'Tender chicken in creamy tomato curry' },",
               "        { name: 'Beef Burger Deluxe', price: 16, desc: 'Angus beef patty with cheese, lettuce, tomato' },",
@@ -96,7 +96,7 @@
               "        { name: 'Margherita Pizza', price: 14, desc: 'Classic tomato, mozzarella, basil pizza' },",
               "        { name: 'Teriyaki Chicken Bowl', price: 17, desc: 'Grilled chicken over rice with vegetables' }",
               "    ],",
-              "    'SIDE_DISH': [",
+              "    'side_dish': [",
               "        { name: 'French Fries', price: 5, desc: 'Crispy golden fries' },",
               "        { name: 'Mashed Potatoes', price: 6, desc: 'Creamy mashed potatoes with gravy' },",
               "        { name: 'Steamed Rice', price: 4, desc: 'Jasmine rice' },",
@@ -108,7 +108,7 @@
               "        { name: 'Grilled Vegetables', price: 7, desc: 'Seasonal grilled veggies' },",
               "        { name: 'Sweet Potato Fries', price: 6, desc: 'Crispy sweet potato fries' }",
               "    ],",
-              "    'DESSERT': [",
+              "    'dessert': [",
               "        { name: 'Chocolate Lava Cake', price: 9, desc: 'Warm chocolate cake with molten center' },",
               "        { name: 'Tiramisu', price: 8, desc: 'Italian coffee-soaked ladyfinger dessert' },",
               "        { name: 'Cheesecake', price: 8, desc: 'New York style cheesecake' },",
@@ -118,7 +118,7 @@
               "        { name: 'Panna Cotta', price: 8, desc: 'Italian cream dessert with berry compote' },",
               "        { name: 'Crème Brûlée', price: 9, desc: 'Custard with caramelized sugar top' }",
               "    ],",
-              "    'BEVERAGE': [",
+              "    'beverage': [",
               "        { name: 'Fresh Orange Juice', price: 5, desc: 'Freshly squeezed orange juice' },",
               "        { name: 'Iced Tea', price: 4, desc: 'Sweet or unsweetened' },",
               "        { name: 'Coffee', price: 3, desc: 'Hot brewed coffee' },",
@@ -193,7 +193,7 @@
           "raw": "{\n  \"name\": \"{{item_name}}\",\n  \"description\": \"{{item_description}}\",\n  \"price\": {{item_price}},\n  \"category\": \"{{item_category}}\",\n  \"available\": {{item_available}},\n  \"image_url\": \"https://via.placeholder.com/300\"\n}"
         },
         "url": {
-          "raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu",
+          "raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items-items",
           "host": ["{{base_url}}"],
           "path": ["api", "v1", "restaurants", "{{restaurant_id}}", "menu"]
         }

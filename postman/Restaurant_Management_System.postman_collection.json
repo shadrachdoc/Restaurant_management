@@ -520,7 +520,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items",
+							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items-items",
 							"host": [
 								"{{base_url}}"
 							],
@@ -560,7 +560,7 @@
 							}
 						},
 						"url": {
-							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items",
+							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items-items",
 							"host": [
 								"{{base_url}}"
 							],
@@ -600,7 +600,7 @@
 							}
 						},
 						"url": {
-							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items/{{menu_item_id}}",
+							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items-items/{{menu_item_id}}",
 							"host": [
 								"{{base_url}}"
 							],

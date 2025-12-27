@@ -570,7 +570,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu",
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items",
 									"host": [
 										"{{base_url}}"
 									],
@@ -606,7 +606,7 @@
 									"raw": "{\n    \"name\": \"Margherita Pizza\",\n    \"description\": \"Classic pizza with tomato, mozzarella, and basil\",\n    \"price\": 12.99,\n    \"category\": \"Main Course\",\n    \"is_available\": true,\n    \"preparation_time\": 15,\n    \"is_vegetarian\": true,\n    \"is_vegan\": false,\n    \"allergens\": [\"dairy\", \"gluten\"]\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu",
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items",
 									"host": [
 										"{{base_url}}"
 									],
