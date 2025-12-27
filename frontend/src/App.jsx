@@ -31,6 +31,7 @@ import KitchenDashboard from './pages/Kitchen/KitchenDashboard';
 
 // Master Admin Pages
 import MasterAdminDashboard from './pages/MasterAdmin/MasterAdminDashboard';
+import UserManagement from './pages/MasterAdmin/UserManagement';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -183,6 +184,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['master_admin']}>
               <MasterAdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/master-admin/users"
+          element={
+            <ProtectedRoute allowedRoles={['master_admin']}>
+              <UserManagement />
             </ProtectedRoute>
           }
         />

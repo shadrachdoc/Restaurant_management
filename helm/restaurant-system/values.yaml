@@ -134,7 +134,7 @@ customerService:
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
-    port: 8005
+    port: 8007
   resources:
     limits:
       cpu: 500m

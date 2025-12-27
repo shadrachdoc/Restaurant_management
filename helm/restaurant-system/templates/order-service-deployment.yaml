@@ -6,7 +6,6 @@ metadata:
   namespace: {{ .Values.namespace }}
   labels:
     app: {{ .Values.orderService.name }}
-    tier: backend
 spec:
   replicas: {{ .Values.orderService.replicaCount }}
   selector:
@@ -16,49 +15,92 @@ spec:
     metadata:
       labels:
         app: {{ .Values.orderService.name }}
-        tier: backend
     spec:
       containers:
-      - name: {{ .Values.orderService.name }}
+      - name: order-service
         image: "{{ .Values.orderService.image.repository }}:{{ .Values.orderService.image.tag }}"
         imagePullPolicy: {{ .Values.orderService.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.orderService.service.port }}
           name: http
         env:
-        - name: DATABASE_URL
-          value: "postgresql://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@postgres-service:{{ .Values.postgresql.service.port }}/{{ .Values.postgresql.auth.database }}"
         - name: POSTGRES_USER
-          value: "{{ .Values.postgresql.auth.username }}"
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: POSTGRES_USER
         - name: POSTGRES_PASSWORD
-          value: "{{ .Values.postgresql.auth.password }}"
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: POSTGRES_PASSWORD
         - name: POSTGRES_DB
-          value: "{{ .Values.postgresql.auth.database }}"
-        - name: POSTGRES_HOST
-          value: "postgres-service"
-        - name: POSTGRES_PORT
-          value: "{{ .Values.postgresql.service.port }}"
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: POSTGRES_DB
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: DATABASE_URL
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: REDIS_HOST
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_USER
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: RABBITMQ_USER
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: RABBITMQ_PASSWORD
         - name: JWT_SECRET_KEY
-          value: "{{ .Values.secrets.jwtSecretKey }}"
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: JWT_SECRET_KEY
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: SESSION_SECRET
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: ENVIRONMENT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: LOG_LEVEL
         - name: RESTAURANT_SERVICE_URL
-          value: "http://restaurant-service:{{ .Values.restaurantService.service.port }}"
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: RESTAURANT_SERVICE_URL
         resources:
-          limits:
-            cpu: {{ .Values.orderService.resources.limits.cpu }}
-            memory: {{ .Values.orderService.resources.limits.memory }}
-          requests:
-            cpu: {{ .Values.orderService.resources.requests.cpu }}
-            memory: {{ .Values.orderService.resources.requests.memory }}
+          {{- toYaml .Values.orderService.resources | nindent 10 }}
         livenessProbe:
           httpGet:
             path: /health
-            port: {{ .Values.orderService.service.port }}
+            port: http
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /health
-            port: {{ .Values.orderService.service.port }}
+            port: http
           initialDelaySeconds: 10
           periodSeconds: 5
 {{- end }}

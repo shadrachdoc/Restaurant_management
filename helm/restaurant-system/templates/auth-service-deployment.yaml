@@ -5,7 +5,7 @@ metadata:
   name: {{ .Values.authService.name }}
   namespace: {{ .Values.namespace }}
   labels:
-    {{- include "restaurant-system.authService.labels" . | nindent 4 }}
+    app: {{ .Values.authService.name }}
 spec:
   replicas: {{ .Values.authService.replicaCount }}
   selector:
@@ -15,36 +15,15 @@ spec:
     metadata:
       labels:
         app: {{ .Values.authService.name }}
-        {{- include "restaurant-system.selectorLabels" . | nindent 8 }}
     spec:
-      {{- if .Values.global.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
-      {{- end }}
       containers:
       - name: auth-service
-        image: "{{ .Values.global.imageRegistry }}/{{ .Values.authService.image.repository }}:{{ .Values.authService.image.tag }}"
+        image: "{{ .Values.authService.image.repository }}:{{ .Values.authService.image.tag }}"
         imagePullPolicy: {{ .Values.authService.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.authService.service.port }}
           name: http
-          protocol: TCP
         env:
-        - name: POSTGRES_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: restaurant-config
-              key: POSTGRES_HOST
-        - name: POSTGRES_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: restaurant-config
-              key: POSTGRES_PORT
-        - name: POSTGRES_DB
-          valueFrom:
-            configMapKeyRef:
-              name: restaurant-config
-              key: POSTGRES_DB
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
@@ -55,11 +34,51 @@ spec:
             secretKeyRef:
               name: restaurant-secrets
               key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: POSTGRES_DB
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: DATABASE_URL
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: REDIS_PORT
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_USER
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: RABBITMQ_USER
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: RABBITMQ_PASSWORD
         - name: JWT_SECRET_KEY
           valueFrom:
             secretKeyRef:
               name: restaurant-secrets
               key: JWT_SECRET_KEY
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: SESSION_SECRET
         - name: JWT_ALGORITHM
           valueFrom:
             configMapKeyRef:
@@ -70,37 +89,28 @@ spec:
             configMapKeyRef:
               name: restaurant-config
               key: ACCESS_TOKEN_EXPIRE_MINUTES
-        - name: REFRESH_TOKEN_EXPIRE_DAYS
-          valueFrom:
-            configMapKeyRef:
-              name: restaurant-config
-              key: REFRESH_TOKEN_EXPIRE_DAYS
-        - name: LOG_LEVEL
-          valueFrom:
-            configMapKeyRef:
-              name: restaurant-config
-              key: LOG_LEVEL
         - name: ENVIRONMENT
           valueFrom:
             configMapKeyRef:
               name: restaurant-config
               key: ENVIRONMENT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: LOG_LEVEL
         resources:
           {{- toYaml .Values.authService.resources | nindent 10 }}
         livenessProbe:
           httpGet:
-            path: /api/v1/auth/health
+            path: /health
             port: http
           initialDelaySeconds: 30
           periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /api/v1/auth/health
+            path: /health
             port: http
           initialDelaySeconds: 10
           periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 3
 {{- end }}

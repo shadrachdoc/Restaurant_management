@@ -28,6 +28,9 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
+    password: Optional[str] = Field(None, min_length=8, max_length=100)
+    role: Optional[UserRole] = None
+    restaurant_id: Optional[UUID4] = None
     is_active: Optional[bool] = None
 
 
