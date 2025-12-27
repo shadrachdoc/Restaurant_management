@@ -25,6 +25,9 @@ import MenuManagement from './pages/Admin/MenuManagement';
 import TableManagement from './pages/Admin/TableManagement';
 import StaffManagement from './pages/Admin/StaffManagement';
 import FeedbackView from './pages/Admin/FeedbackView';
+import AnalyticsDashboard from './pages/Admin/AnalyticsDashboard';
+import PredictionsDashboard from './pages/Admin/PredictionsDashboard';
+import CustomerInsights from './pages/Admin/CustomerInsights';
 
 // Chef Pages
 import KitchenDashboard from './pages/Kitchen/KitchenDashboard';
@@ -164,6 +167,30 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['restaurant_admin']}>
               <FeedbackView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/analytics"
+          element={
+            <ProtectedRoute allowedRoles={['restaurant_admin']}>
+              <AnalyticsDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/predictions"
+          element={
+            <ProtectedRoute allowedRoles={['restaurant_admin']}>
+              <PredictionsDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/customer-insights"
+          element={
+            <ProtectedRoute allowedRoles={['restaurant_admin']}>
+              <CustomerInsights />
             </ProtectedRoute>
           }
         />

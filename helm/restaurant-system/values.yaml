@@ -97,7 +97,7 @@ restaurantService:
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
 
-# Order Service
+# Order Service (with ML Analytics - adjusted for laptop testing)
 orderService:
   enabled: true
   name: order-service
@@ -111,15 +111,18 @@ orderService:
     port: 8004
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 1500m      # 1.5 CPU cores (laptop-friendly, scaled down from 2 cores)
+      memory: 2Gi     # 2GB RAM (laptop-friendly, scaled down from 4GB)
     requests:
-      cpu: 200m
-      memory: 256Mi
+      cpu: 500m       # 0.5 CPU baseline
+      memory: 1Gi     # 1GB baseline
+  env:
+    ENABLE_ML_PREDICTIONS: "true"
+    ML_MAX_CONCURRENT_TRAININGS: "1"  # Only 1 concurrent training on laptop
   autoscaling:
     enabled: false
     minReplicas: 1
-    maxReplicas: 3
+    maxReplicas: 2
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
 
