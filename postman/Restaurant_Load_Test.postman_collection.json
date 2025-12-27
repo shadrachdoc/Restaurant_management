@@ -7,7 +7,7 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:8000",
+      "value": "http://localhost",
       "type": "string"
     },
     {
@@ -137,23 +137,12 @@
         "header": [
           {
             "key": "Content-Type",
-            "value": "application/x-www-form-urlencoded"
+            "value": "application/json"
           }
         ],
         "body": {
-          "mode": "urlencoded",
-          "urlencoded": [
-            {
-              "key": "username",
-              "value": "{{customer_email}}",
-              "type": "text"
-            },
-            {
-              "key": "password",
-              "value": "{{customer_password}}",
-              "type": "text"
-            }
-          ]
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{customer_email}}\",\n  \"password\": \"{{customer_password}}\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/v1/auth/login",
