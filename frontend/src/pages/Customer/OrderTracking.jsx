@@ -236,7 +236,7 @@ export default function OrderTracking() {
                         </p>
                       )}
                     </div>
-                    <p className="font-semibold">${(parseFloat(item.price) * item.quantity).toFixed(2)}</p>
+                    <p className="font-semibold">{restaurant?.currency_symbol || '$'}{(parseFloat(item.price) * item.quantity).toFixed(2)}</p>
                   </div>
                 ))
               ) : (
@@ -247,19 +247,19 @@ export default function OrderTracking() {
               {order.subtotal && (
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Subtotal</span>
-                  <span>${parseFloat(order.subtotal).toFixed(2)}</span>
+                  <span>{restaurant?.currency_symbol || '$'}{parseFloat(order.subtotal).toFixed(2)}</span>
                 </div>
               )}
               {order.tax && (
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Tax</span>
-                  <span>${parseFloat(order.tax).toFixed(2)}</span>
+                  <span>{restaurant?.currency_symbol || '$'}{parseFloat(order.tax).toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between items-center border-t pt-2">
                 <p className="text-lg font-bold">Total</p>
                 <p className="text-2xl font-bold text-blue-600">
-                  ${parseFloat(order.total).toFixed(2)}
+                  {restaurant?.currency_symbol || '$'}{parseFloat(order.total).toFixed(2)}
                 </p>
               </div>
             </div>
@@ -298,7 +298,7 @@ export default function OrderTracking() {
                               <p className="text-xs text-gray-600 mt-1">{item.description}</p>
                             )}
                             <p className="text-sm font-semibold text-blue-600 mt-1">
-                              ${parseFloat(item.price).toFixed(2)}
+                              {restaurant?.currency_symbol || '$'}{parseFloat(item.price).toFixed(2)}
                             </p>
                           </div>
                           <button
@@ -328,7 +328,7 @@ export default function OrderTracking() {
                     <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
                       <div>
                         <p className="font-medium text-sm">{item.name}</p>
-                        <p className="text-xs text-gray-600">${parseFloat(item.price).toFixed(2)} each</p>
+                        <p className="text-xs text-gray-600">{restaurant?.currency_symbol || '$'}{parseFloat(item.price).toFixed(2)} each</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2 bg-white border rounded-lg">

@@ -5,6 +5,25 @@ import { restaurantAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 
+// Country to currency mapping
+const COUNTRY_CURRENCY_MAP = {
+  'United States': { code: 'USD', symbol: '$' },
+  'United Kingdom': { code: 'GBP', symbol: '£' },
+  'European Union': { code: 'EUR', symbol: '€' },
+  'Canada': { code: 'CAD', symbol: 'CA$' },
+  'Australia': { code: 'AUD', symbol: 'A$' },
+  'India': { code: 'INR', symbol: '₹' },
+  'Japan': { code: 'JPY', symbol: '¥' },
+  'China': { code: 'CNY', symbol: '¥' },
+  'Singapore': { code: 'SGD', symbol: 'S$' },
+  'United Arab Emirates': { code: 'AED', symbol: 'د.إ' },
+  'Saudi Arabia': { code: 'SAR', symbol: '﷼' },
+  'Mexico': { code: 'MXN', symbol: 'MX$' },
+  'Brazil': { code: 'BRL', symbol: 'R$' },
+  'Switzerland': { code: 'CHF', symbol: 'CHF' },
+  'South Africa': { code: 'ZAR', symbol: 'R' },
+};
+
 export default function MasterAdminDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
@@ -21,6 +40,12 @@ export default function MasterAdminDashboard() {
     website: '',
     theme_color: '#000000',
     max_tables: 20,
+    country: 'United States',
+    currency_code: 'USD',
+    currency_symbol: '$',
+    per_table_booking_fee: 0,
+    per_online_booking_fee: 0,
+    enable_booking_fees: false,
   });
 
   useEffect(() => {
@@ -56,6 +81,12 @@ export default function MasterAdminDashboard() {
       website: '',
       theme_color: '#000000',
       max_tables: 20,
+      country: 'United States',
+      currency_code: 'USD',
+      currency_symbol: '$',
+      per_table_booking_fee: 0,
+      per_online_booking_fee: 0,
+      enable_booking_fees: false,
     });
     setShowModal(true);
   };
@@ -71,6 +102,12 @@ export default function MasterAdminDashboard() {
       website: restaurant.website || '',
       theme_color: restaurant.theme_color || '#000000',
       max_tables: restaurant.max_tables || 20,
+      country: restaurant.country || 'United States',
+      currency_code: restaurant.currency_code || 'USD',
+      currency_symbol: restaurant.currency_symbol || '$',
+      per_table_booking_fee: restaurant.per_table_booking_fee || 0,
+      per_online_booking_fee: restaurant.per_online_booking_fee || 0,
+      enable_booking_fees: restaurant.enable_booking_fees || false,
     });
     setShowModal(true);
   };
@@ -113,6 +150,16 @@ export default function MasterAdminDashboard() {
       ...prev,
       [name]: name === 'max_tables' ? parseInt(value) || 0 : value,
     }));
+  };
+
+  const handleCountryChange = (country) => {
+    const currency = COUNTRY_CURRENCY_MAP[country] || { code: 'USD', symbol: '$' };
+    setFormData({
+      ...formData,
+      country,
+      currency_code: currency.code,
+      currency_symbol: currency.symbol,
+    });
   };
 
   const stats = [
@@ -413,6 +460,91 @@ export default function MasterAdminDashboard() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Country
+                    </label>
+                    <select
+                      name="country"
+                      value={formData.country}
+                      onChange={(e) => handleCountryChange(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      {Object.keys(COUNTRY_CURRENCY_MAP).map(country => (
+                        <option key={country} value={country}>{country}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Currency
+                    </label>
+                    <input
+                      type="text"
+                      value={`${formData.currency_code} (${formData.currency_symbol})`}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+                      disabled
+                    />
+                  </div>
+                </div>
+
+                {/* Billing Configuration */}
+                <div className="border-t pt-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Billing Configuration</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="enable_booking_fees"
+                        checked={formData.enable_booking_fees}
+                        onChange={(e) => setFormData({ ...formData, enable_booking_fees: e.target.checked })}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor="enable_booking_fees" className="ml-2 text-sm font-medium text-gray-700">
+                        Enable Booking Fees
+                      </label>
+                    </div>
+
+                    {formData.enable_booking_fees && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">
+                            Per Table Booking Fee ({formData.currency_symbol})
+                          </label>
+                          <input
+                            type="number"
+                            name="per_table_booking_fee"
+                            value={formData.per_table_booking_fee}
+                            onChange={(e) => setFormData({ ...formData, per_table_booking_fee: parseFloat(e.target.value) || 0 })}
+                            min="0"
+                            step="0.01"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="0.00"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">
+                            Per Online Booking Fee ({formData.currency_symbol})
+                          </label>
+                          <input
+                            type="number"
+                            name="per_online_booking_fee"
+                            value={formData.per_online_booking_fee}
+                            onChange={(e) => setFormData({ ...formData, per_online_booking_fee: parseFloat(e.target.value) || 0 })}
+                            min="0"
+                            step="0.01"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

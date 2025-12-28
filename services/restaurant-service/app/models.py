@@ -28,6 +28,16 @@ class Restaurant(Base):
     address = Column(Text, nullable=True)
     website = Column(String(500), nullable=True)
 
+    # Location & Currency
+    country = Column(String(100), nullable=True, default="United States")
+    currency_code = Column(String(3), nullable=True, default="USD")  # ISO 4217 currency code
+    currency_symbol = Column(String(10), nullable=True, default="$")
+
+    # Billing Configuration
+    per_table_booking_fee = Column(Float, nullable=False, default=0.0)
+    per_online_booking_fee = Column(Float, nullable=False, default=0.0)
+    enable_booking_fees = Column(Boolean, default=False, nullable=False)
+
     # Subscription
     subscription_status = Column(SQLEnum(SubscriptionStatus), default=SubscriptionStatus.TRIAL, nullable=False)
     pricing_plan = Column(SQLEnum(PricingPlan), default=PricingPlan.BASIC, nullable=False)

@@ -46,8 +46,14 @@ async def create_restaurant(
         address=restaurant_data.address,
         website=str(restaurant_data.website) if restaurant_data.website else None,
         theme_color=restaurant_data.theme_color,
+        country=restaurant_data.country,
+        currency_code=restaurant_data.currency_code,
+        currency_symbol=restaurant_data.currency_symbol,
         pricing_plan=restaurant_data.pricing_plan,
         max_tables=restaurant_data.max_tables,
+        per_table_booking_fee=restaurant_data.per_table_booking_fee,
+        per_online_booking_fee=restaurant_data.per_online_booking_fee,
+        enable_booking_fees=restaurant_data.enable_booking_fees,
         is_active=True
     )
 

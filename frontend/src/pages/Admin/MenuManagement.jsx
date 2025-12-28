@@ -4,10 +4,12 @@ import { FiPlus, FiEdit, FiTrash2, FiToggleLeft, FiToggleRight } from 'react-ico
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { menuAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
+import useRestaurantStore from '../../store/restaurantStore';
 import toast from 'react-hot-toast';
 
 export default function MenuManagement() {
   const { user } = useAuthStore();
+  const { currencySymbol, fetchRestaurant } = useRestaurantStore();
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -29,6 +31,7 @@ export default function MenuManagement() {
   useEffect(() => {
     if (user?.restaurant_id) {
       fetchMenuItems();
+      fetchRestaurant(user.restaurant_id);
     } else {
       setLoading(false);
     }
@@ -186,7 +189,7 @@ export default function MenuManagement() {
                       <div className="p-6">
                         <div className="flex justify-between items-start mb-3">
                           <h3 className="text-lg font-bold">{item.name}</h3>
-                          <span className="text-xl font-bold text-blue-600">${item.price.toFixed(2)}</span>
+                          <span className="text-xl font-bold text-blue-600">{currencySymbol}{item.price.toFixed(2)}</span>
                         </div>
 
                         <p className="text-gray-600 text-sm mb-4 line-clamp-2">{item.description}</p>

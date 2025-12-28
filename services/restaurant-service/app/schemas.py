@@ -18,12 +18,18 @@ class RestaurantBase(BaseModel):
     address: Optional[str] = None
     website: Optional[HttpUrl] = None
     theme_color: str = Field(default="#000000", pattern="^#[0-9A-Fa-f]{6}$")
+    country: Optional[str] = Field(default="United States", max_length=100)
+    currency_code: Optional[str] = Field(default="USD", min_length=3, max_length=3)
+    currency_symbol: Optional[str] = Field(default="$", max_length=10)
 
 
 class RestaurantCreate(RestaurantBase):
     """Schema for restaurant creation"""
     pricing_plan: PricingPlan = PricingPlan.BASIC
     max_tables: int = Field(default=10, ge=1, le=1000)
+    per_table_booking_fee: float = Field(default=0.0, ge=0)
+    per_online_booking_fee: float = Field(default=0.0, ge=0)
+    enable_booking_fees: bool = False
 
 
 class RestaurantUpdate(BaseModel):
@@ -36,7 +42,13 @@ class RestaurantUpdate(BaseModel):
     address: Optional[str] = None
     website: Optional[HttpUrl] = None
     theme_color: Optional[str] = Field(None, pattern="^#[0-9A-Fa-f]{6}$")
+    country: Optional[str] = Field(None, max_length=100)
+    currency_code: Optional[str] = Field(None, min_length=3, max_length=3)
+    currency_symbol: Optional[str] = Field(None, max_length=10)
     max_tables: Optional[int] = Field(None, ge=1, le=1000)
+    per_table_booking_fee: Optional[float] = Field(None, ge=0)
+    per_online_booking_fee: Optional[float] = Field(None, ge=0)
+    enable_booking_fees: Optional[bool] = None
 
 
 class RestaurantBranding(BaseModel):
@@ -62,6 +74,9 @@ class RestaurantResponse(RestaurantBase):
     advertisements: List[Dict[str, Any]] = []
     is_active: bool
     max_tables: int
+    per_table_booking_fee: float
+    per_online_booking_fee: float
+    enable_booking_fees: bool
     created_at: datetime
     updated_at: datetime
 
