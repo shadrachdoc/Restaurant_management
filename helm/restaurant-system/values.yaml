@@ -18,9 +18,9 @@ apiGateway:
   name: api-gateway
   replicaCount: 1
   image:
-    repository: restaurant_management_api-gateway
-    tag: latest
-    pullPolicy: Never
+    repository: shadrach85/api-gateway
+    tag: 739884b
+    pullPolicy: Always
   service:
     type: ClusterIP
     port: 8000
@@ -51,9 +51,9 @@ authService:
   name: auth-service
   replicaCount: 1
   image:
-    repository: restaurant_management_auth-service
-    tag: latest
-    pullPolicy: Never
+    repository: shadrach85/auth-service
+    tag: 739884b
+    pullPolicy: Always
   service:
     type: ClusterIP
     port: 8001
@@ -77,9 +77,9 @@ restaurantService:
   name: restaurant-service
   replicaCount: 1
   image:
-    repository: restaurant_management_restaurant-service
-    tag: latest
-    pullPolicy: Never
+    repository: shadrach85/restaurant-service
+    tag: 739884b
+    pullPolicy: Always
   service:
     type: ClusterIP
     port: 8003
@@ -103,9 +103,9 @@ orderService:
   name: order-service
   replicaCount: 1
   image:
-    repository: restaurant_management_order-service
-    tag: latest
-    pullPolicy: Never
+    repository: shadrach85/order-service
+    tag: 739884b
+    pullPolicy: Always
   service:
     type: ClusterIP
     port: 8004
@@ -133,8 +133,8 @@ customerService:
   replicaCount: 1
   image:
     repository: restaurant_management_customer-service
-    tag: latest
-    pullPolicy: Never
+    tag: 739884b
+    pullPolicy: Always
   service:
     type: ClusterIP
     port: 8007
@@ -158,9 +158,9 @@ frontend:
   name: frontend
   replicaCount: 1
   image:
-    repository: restaurant_management_frontend
-    tag: latest
-    pullPolicy: Never
+    repository: shadrach85/restaurant-frontend
+    tag: 739884b
+    pullPolicy: Always
   service:
     type: ClusterIP
     port: 80
