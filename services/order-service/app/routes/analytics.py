@@ -222,11 +222,17 @@ async def get_demand_predictions(
 
     **Returns:** Predicted quantities with confidence intervals
     """
-    # TODO: Implement with prediction_service
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Demand predictions endpoint will be implemented with ML prediction service"
-    )
+    try:
+        predictions = await analytics_service.get_demand_predictions(
+            db, restaurant_id, period
+        )
+        return predictions
+    except Exception as e:
+        logger.error(f"Demand predictions error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate demand predictions: {str(e)}"
+        )
 
 
 # ============================================================================

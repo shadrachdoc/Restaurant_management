@@ -67,7 +67,7 @@ aiofiles==23.2.1
 phonenumbers==8.13.27
 
 # Machine Learning & Analytics
-prophet==1.1.5
+prophet==1.1.4
 pandas==2.2.0
 numpy==1.26.3
 scikit-learn==1.4.0

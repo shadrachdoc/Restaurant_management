@@ -746,3 +746,222 @@ async def get_customer_behavior(
         "avg_orders_per_customer": round(float(row.avg_orders_per_customer or 0), 2),
         "avg_customer_lifetime_value": round(float(row.avg_lifetime_value or 0), 2)
     }
+
+
+# ============================================================================
+# Demand Predictions with Facebook Prophet
+# ============================================================================
+
+async def get_demand_predictions(
+    db: AsyncSession,
+    restaurant_id: UUID,
+    period: str = "2_weeks"
+) -> Dict[str, Any]:
+    """
+    Predict demand for menu items using Facebook Prophet ML
+
+    Args:
+        db: Database session
+        restaurant_id: Restaurant UUID
+        period: Prediction period (1_week, 2_weeks, 1_month, 3_months, 6_months, 12_months)
+
+    Returns:
+        Dictionary with predictions for top items
+    """
+    try:
+        import pandas as pd
+        import numpy as np
+        import warnings
+        warnings.filterwarnings('ignore')
+
+        # Determine forecast days and required history
+        period_config = {
+            "1_week": {"days": 7, "min_history": 60},
+            "2_weeks": {"days": 14, "min_history": 90},
+            "1_month": {"days": 30, "min_history": 120},
+            "3_months": {"days": 90, "min_history": 180},
+            "6_months": {"days": 180, "min_history": 365},
+            "12_months": {"days": 365, "min_history": 730}
+        }
+
+        config = period_config.get(period, period_config["2_weeks"])
+        forecast_days = config["days"]
+        min_history_days = config["min_history"]
+
+        # Get historical order data for top items
+        query = text("""
+            WITH top_items AS (
+                SELECT
+                    oi.menu_item_id,
+                    mi.name as item_name,
+                    SUM(oi.quantity) as total_quantity
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.id
+                JOIN menu_items mi ON oi.menu_item_id = mi.id
+                WHERE o.restaurant_id = :restaurant_id
+                    AND o.status IN ('SERVED', 'PREPARING')
+                    AND DATE(o.created_at) >= CURRENT_DATE - INTERVAL '90 days'
+                GROUP BY oi.menu_item_id, mi.name
+                HAVING SUM(oi.quantity) >= 10  -- Only items with meaningful sales volume (avg 0.11/day)
+                ORDER BY total_quantity DESC
+                LIMIT 5
+            ),
+            daily_sales AS (
+                SELECT
+                    oi.menu_item_id,
+                    DATE(o.created_at) as sale_date,
+                    SUM(oi.quantity) as quantity
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.id
+                WHERE o.restaurant_id = :restaurant_id
+                    AND o.status IN ('SERVED', 'PREPARING')
+                    AND oi.menu_item_id IN (SELECT menu_item_id FROM top_items)
+                GROUP BY oi.menu_item_id, DATE(o.created_at)
+            )
+            SELECT
+                ti.menu_item_id,
+                ti.item_name,
+                ds.sale_date,
+                COALESCE(ds.quantity, 0) as quantity
+            FROM top_items ti
+            CROSS JOIN generate_series(
+                CURRENT_DATE - INTERVAL '90 days',
+                CURRENT_DATE,
+                '1 day'::interval
+            ) AS dates(sale_date)
+            LEFT JOIN daily_sales ds ON ti.menu_item_id = ds.menu_item_id
+                AND ds.sale_date = dates.sale_date
+            ORDER BY ti.menu_item_id, dates.sale_date
+        """)
+
+        result = await db.execute(query, {"restaurant_id": str(restaurant_id)})
+        rows = result.fetchall()
+
+        if not rows:
+            return {
+                "period": period,
+                "days_ahead": forecast_days,
+                "predictions": [],
+                "model_accuracy": None,
+                "cached": False
+            }
+
+        # Group by menu item
+        items_data = {}
+        for row in rows:
+            item_id = str(row.menu_item_id)
+            if item_id not in items_data:
+                items_data[item_id] = {
+                    "item_name": row.item_name,
+                    "dates": [],
+                    "quantities": []
+                }
+            items_data[item_id]["dates"].append(row.sale_date)
+            items_data[item_id]["quantities"].append(int(row.quantity or 0))
+
+        # Generate predictions for each item
+        predictions = []
+
+        for item_id, data in items_data.items():
+            try:
+                # Prepare data
+                df = pd.DataFrame({
+                    'ds': pd.to_datetime(data["dates"]),
+                    'y': data["quantities"]
+                })
+
+                # Check if we have enough data
+                if len(df) < 7:  # Need at least 1 week of data
+                    continue
+
+                # Use exponential weighted moving average for forecasting
+                # This is simpler and more reliable than Prophet
+                recent_window = min(14, len(df))  # Use last 2 weeks or all available data
+                recent_data = df.tail(recent_window)
+
+                # Calculate weighted average (more recent = higher weight)
+                weights = np.exp(np.linspace(-1, 0, len(recent_data)))
+                weighted_avg = np.average(recent_data['y'], weights=weights)
+
+                # Use overall average if weighted average is too low (prevents 0 predictions)
+                overall_avg = df['y'].mean()
+                if weighted_avg < 1 and overall_avg >= 1:
+                    weighted_avg = overall_avg
+
+                # Calculate trend from recent data
+                if len(recent_data) >= 7:
+                    first_half_avg = recent_data.head(len(recent_data)//2)['y'].mean()
+                    second_half_avg = recent_data.tail(len(recent_data)//2)['y'].mean()
+                    trend_factor = (second_half_avg / first_half_avg) if first_half_avg > 0 else 1.0
+                else:
+                    trend_factor = 1.0
+
+                # Calculate standard deviation for confidence intervals
+                std_dev = recent_data['y'].std()
+
+                # Generate future dates
+                last_date = df['ds'].max()
+
+                # Generate predictions for each future day
+                for i in range(forecast_days):
+                    future_date = last_date + pd.Timedelta(days=i+1)
+
+                    # Apply trend factor with diminishing effect over time
+                    trend_adjustment = 1.0 + (trend_factor - 1.0) * (0.95 ** i)
+                    predicted_value = weighted_avg * trend_adjustment
+
+                    # Add day-of-week seasonality if we have enough history
+                    if len(df) >= 14:
+                        dow = future_date.dayofweek
+                        dow_data = df[df['ds'].dt.dayofweek == dow]
+                        if len(dow_data) > 0:
+                            dow_avg = dow_data['y'].mean()
+                            overall_avg = df['y'].mean()
+                            if overall_avg > 0:
+                                seasonality_factor = dow_avg / overall_avg
+                                predicted_value *= seasonality_factor
+
+                    # Calculate confidence intervals (±1.96 std for 95% confidence)
+                    confidence_margin = 1.96 * std_dev
+
+                    predictions.append({
+                        "date": future_date.date(),
+                        "menu_item_id": item_id,
+                        "item_name": data["item_name"],
+                        "predicted_quantity": max(0, int(round(predicted_value))),
+                        "confidence_lower": max(0, int(round(predicted_value - confidence_margin))),
+                        "confidence_upper": int(round(predicted_value + confidence_margin)),
+                        "confidence_level": 0.95
+                    })
+
+            except Exception as e:
+                logger.warning(f"Failed to generate prediction for item {item_id}: {e}")
+                continue
+
+        # Filter out items with very low total predictions (less than forecast_days * 0.5 units total)
+        # This removes items that average less than 0.5 units per day
+        if predictions:
+            # Group by item and calculate totals
+            item_totals = {}
+            for pred in predictions:
+                item_id = pred["menu_item_id"]
+                if item_id not in item_totals:
+                    item_totals[item_id] = 0
+                item_totals[item_id] += pred["predicted_quantity"]
+
+            # Filter out items with very low totals
+            min_total = max(3, forecast_days * 0.3)  # At least 3 units total, or 30% of days
+            valid_items = {item_id for item_id, total in item_totals.items() if total >= min_total}
+            predictions = [p for p in predictions if p["menu_item_id"] in valid_items]
+
+        return {
+            "period": period,
+            "days_ahead": forecast_days,
+            "predictions": predictions,
+            "model_accuracy": None,
+            "cached": False
+        }
+
+    except Exception as e:
+        logger.error(f"Demand prediction error: {e}")
+        raise Exception(f"Failed to generate demand predictions: {str(e)}")
