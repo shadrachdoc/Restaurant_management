@@ -7,7 +7,7 @@ from sqlalchemy import select, func
 from typing import List
 from uuid import UUID
 from ..database import get_db
-from ..models import Restaurant, MenuItem, Table, Feedback, Invoice
+from ..models import Restaurant, MenuItem, Table, Feedback, Invoice, Order
 from ..schemas import (
     RestaurantCreate,
     RestaurantUpdate,
@@ -357,10 +357,23 @@ async def get_restaurant_billing(
             detail="Restaurant not found"
         )
 
-    # TODO: In a production setup, this would query the order-service via API or shared database
-    # For now, returning mock data - actual order counting needs inter-service communication
-    total_table_bookings = 0
-    total_online_bookings = 0
+    # Query actual order counts since last invoice (or restaurant creation)
+    # Table bookings: orders with table_id NOT NULL
+    # Online bookings: orders with table_id IS NULL
+    period_start = restaurant.last_invoice_date or restaurant.created_at
+
+    order_counts_query = await db.execute(
+        select(
+            func.count().filter(Order.table_id.isnot(None)).label('table_bookings'),
+            func.count().filter(Order.table_id.is_(None)).label('online_bookings')
+        ).where(
+            Order.restaurant_id == restaurant.id,
+            Order.created_at >= period_start
+        )
+    )
+    order_counts = order_counts_query.first()
+    total_table_bookings = order_counts.table_bookings if order_counts else 0
+    total_online_bookings = order_counts.online_bookings if order_counts else 0
 
     # Calculate revenue based on configured fees
     table_booking_revenue = total_table_bookings * restaurant.per_table_booking_fee if restaurant.enable_booking_fees else 0.0
@@ -412,10 +425,22 @@ async def generate_invoice(
     period_start = invoice_data.period_start or restaurant.last_invoice_date or restaurant.created_at
     period_end = invoice_data.period_end or datetime.utcnow()
 
-    # TODO: Query order-service to get actual order counts for the period
-    # For now using mock data - requires inter-service communication
-    total_table_bookings = 0
-    total_online_bookings = 0
+    # Query actual order counts for the billing period
+    # Table bookings: orders with table_id NOT NULL
+    # Online bookings: orders with table_id IS NULL
+    order_counts_query = await db.execute(
+        select(
+            func.count().filter(Order.table_id.isnot(None)).label('table_bookings'),
+            func.count().filter(Order.table_id.is_(None)).label('online_bookings')
+        ).where(
+            Order.restaurant_id == restaurant_id,
+            Order.created_at >= period_start,
+            Order.created_at <= period_end
+        )
+    )
+    order_counts = order_counts_query.first()
+    total_table_bookings = order_counts.table_bookings if order_counts else 0
+    total_online_bookings = order_counts.online_bookings if order_counts else 0
 
     # Calculate revenue
     table_booking_revenue = total_table_bookings * restaurant.per_table_booking_fee if restaurant.enable_booking_fees else 0.0

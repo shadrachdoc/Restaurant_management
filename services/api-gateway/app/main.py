@@ -107,11 +107,10 @@ async def gateway(
     elif path.startswith("api/v1/orders") or path.startswith("api/v1/sessions") or path.startswith("api/v1/assistance"):
         target_url = f"{ORDER_SERVICE_URL}/{path}"
         print(f"DEBUG: Routing to ORDER_SERVICE: {target_url}")
-    elif path.startswith("api/v1/restaurants") and "analytics" in path:
-        # Route analytics endpoints to order-service (where analytics module lives)
-        # This must come BEFORE the general restaurants route
+    elif path.startswith("api/v1/restaurants") and "/analytics/" in path:
+        # Route detailed analytics endpoints to order-service (e.g., /analytics/revenue, /analytics/popular-items)
         target_url = f"{ORDER_SERVICE_URL}/{path}"
-        print(f"DEBUG: Routing analytics to ORDER_SERVICE: {target_url}")
+        print(f"DEBUG: Routing detailed analytics to ORDER_SERVICE: {target_url}")
     elif path.startswith("api/v1/restaurants"):
         target_url = f"{RESTAURANT_SERVICE_URL}/{path}"
         print(f"DEBUG: Routing to RESTAURANT_SERVICE: {target_url}")

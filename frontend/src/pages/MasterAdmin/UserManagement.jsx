@@ -19,7 +19,7 @@ export default function UserManagement() {
     email: '',
     password: '',
     full_name: '',
-    role: 'RESTAURANT_ADMIN',
+    role: 'restaurant_admin',
     restaurant_id: '',
     is_active: true,
   });
@@ -62,7 +62,7 @@ export default function UserManagement() {
       email: '',
       password: '',
       full_name: '',
-      role: 'RESTAURANT_ADMIN',
+      role: 'restaurant_admin',
       restaurant_id: '',
       is_active: true,
     });
@@ -76,7 +76,7 @@ export default function UserManagement() {
       email: user.email || '',
       password: '', // Don't show existing password
       full_name: user.full_name || '',
-      role: user.role || 'RESTAURANT_ADMIN',
+      role: user.role || 'restaurant_admin',
       restaurant_id: user.restaurant_id || '',
       is_active: user.is_active,
     });
@@ -107,11 +107,20 @@ export default function UserManagement() {
         if (!updateData.password) {
           delete updateData.password; // Don't update password if not provided
         }
+        // Convert empty string to null for restaurant_id
+        if (updateData.restaurant_id === '') {
+          updateData.restaurant_id = null;
+        }
         await axios.put(`/api/v1/auth/users/${editingUser.id}`, updateData);
         toast.success('User updated successfully!');
       } else {
         // Create user
-        await axios.post('/api/v1/auth/signup', formData);
+        const createData = { ...formData };
+        // Convert empty string to null for restaurant_id
+        if (createData.restaurant_id === '') {
+          createData.restaurant_id = null;
+        }
+        await axios.post('/api/v1/auth/signup', createData);
         toast.success('User created successfully!');
       }
       setShowModal(false);
@@ -181,7 +190,7 @@ export default function UserManagement() {
               <div>
                 <p className="text-gray-600 text-sm mb-1">Restaurant Admins</p>
                 <p className="text-4xl font-bold text-gray-900">
-                  {users.filter((u) => u.role === 'RESTAURANT_ADMIN').length}
+                  {users.filter((u) => u.role === 'restaurant_admin').length}
                 </p>
               </div>
               <div className="bg-green-500 w-16 h-16 rounded-full flex items-center justify-center">
@@ -194,7 +203,7 @@ export default function UserManagement() {
               <div>
                 <p className="text-gray-600 text-sm mb-1">Chefs</p>
                 <p className="text-4xl font-bold text-gray-900">
-                  {users.filter((u) => u.role === 'CHEF').length}
+                  {users.filter((u) => u.role === 'chef').length}
                 </p>
               </div>
               <div className="bg-purple-500 w-16 h-16 rounded-full flex items-center justify-center">
@@ -390,24 +399,24 @@ export default function UserManagement() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     >
-                      <option value="MASTER_ADMIN">Master Admin</option>
-                      <option value="RESTAURANT_ADMIN">Restaurant Admin</option>
-                      <option value="CHEF">Chef</option>
-                      <option value="CUSTOMER">Customer</option>
+                      <option value="master_admin">Master Admin</option>
+                      <option value="restaurant_admin">Restaurant Admin</option>
+                      <option value="chef">Chef</option>
+                      <option value="customer">Customer</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Assign Restaurant {(formData.role === 'RESTAURANT_ADMIN' || formData.role === 'CHEF') && '*'}
+                      Assign Restaurant {(formData.role === 'restaurant_admin' || formData.role === 'chef') && '*'}
                     </label>
                     <select
                       name="restaurant_id"
                       value={formData.restaurant_id}
                       onChange={handleInputChange}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required={formData.role === 'RESTAURANT_ADMIN' || formData.role === 'CHEF'}
-                      disabled={formData.role === 'MASTER_ADMIN' || formData.role === 'CUSTOMER'}
+                      required={formData.role === 'restaurant_admin' || formData.role === 'chef'}
+                      disabled={formData.role === 'master_admin' || formData.role === 'customer'}
                     >
                       <option value="">-- Select Restaurant --</option>
                       {restaurants.map((restaurant) => (
