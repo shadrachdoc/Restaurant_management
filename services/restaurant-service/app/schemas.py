@@ -281,6 +281,21 @@ class RestaurantAnalytics(BaseModel):
     menu_items_by_category: Dict[str, int]
 
 
+class RestaurantBilling(BaseModel):
+    """Schema for restaurant billing response"""
+    restaurant_id: UUID4
+    restaurant_name: str
+    currency_symbol: str
+    enable_booking_fees: bool
+    per_table_booking_fee: float
+    per_online_booking_fee: float
+    total_table_bookings: int
+    total_online_bookings: int
+    table_booking_revenue: float
+    online_booking_revenue: float
+    total_revenue: float
+
+
 # Generic Response
 class MessageResponse(BaseModel):
     """Generic message response"""
@@ -293,3 +308,35 @@ class ErrorResponse(BaseModel):
     error: str
     detail: Optional[str] = None
     status_code: int
+
+
+# Invoice Schemas
+class InvoiceResponse(BaseModel):
+    """Schema for invoice response"""
+    id: UUID4
+    restaurant_id: UUID4
+    invoice_number: str
+    period_start: datetime
+    period_end: datetime
+    currency_code: str
+    currency_symbol: str
+    per_table_booking_fee: float
+    per_online_booking_fee: float
+    total_table_bookings: int
+    total_online_bookings: int
+    table_booking_revenue: float
+    online_booking_revenue: float
+    total_revenue: float
+    is_paid: bool
+    paid_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class InvoiceCreate(BaseModel):
+    """Schema for generating an invoice"""
+    period_start: Optional[datetime] = None  # Defaults to last_invoice_date or restaurant creation
+    period_end: Optional[datetime] = None    # Defaults to current time

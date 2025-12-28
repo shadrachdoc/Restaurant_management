@@ -116,8 +116,14 @@ export const restaurantAPI = {
   update: (id, data) => restaurantApi.put(`/api/v1/restaurants/${id}`, data),
   delete: (id) => restaurantApi.delete(`/api/v1/restaurants/${id}`),
   getAnalytics: (id) => restaurantApi.get(`/api/v1/restaurants/${id}/analytics`),
+  getBilling: (id) => restaurantApi.get(`/api/v1/restaurants/${id}/billing`),
   updateBranding: (id, data) => restaurantApi.patch(`/api/v1/restaurants/${id}/branding`, data),
   toggleStatus: (id) => restaurantApi.patch(`/api/v1/restaurants/${id}/toggle-status`),
+
+  // Invoice endpoints
+  generateInvoice: (id, data) => restaurantApi.post(`/api/v1/restaurants/${id}/invoices`, data || {}),
+  listInvoices: (id, params) => restaurantApi.get(`/api/v1/restaurants/${id}/invoices`, { params }),
+  getInvoice: (restaurantId, invoiceId) => restaurantApi.get(`/api/v1/restaurants/${restaurantId}/invoices/${invoiceId}`),
 };
 
 // Menu API - uses Restaurant Service

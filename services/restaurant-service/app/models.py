@@ -37,6 +37,7 @@ class Restaurant(Base):
     per_table_booking_fee = Column(Float, nullable=False, default=0.0)
     per_online_booking_fee = Column(Float, nullable=False, default=0.0)
     enable_booking_fees = Column(Boolean, default=False, nullable=False)
+    last_invoice_date = Column(DateTime, nullable=True)  # Track when last invoice was generated
 
     # Subscription
     subscription_status = Column(SQLEnum(SubscriptionStatus), default=SubscriptionStatus.TRIAL, nullable=False)
@@ -225,3 +226,50 @@ class OrderItem(Base):
 
     def __repr__(self):
         return f"<OrderItem(id={self.id}, name={self.item_name}, quantity={self.quantity})>"
+
+
+class Invoice(Base):
+    """Invoice model for billing periods"""
+
+    __tablename__ = "invoices"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    restaurant_id = Column(UUID(as_uuid=True), ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # Invoice details
+    invoice_number = Column(String(50), nullable=False, unique=True, index=True)
+
+    # Billing period
+    period_start = Column(DateTime, nullable=False, index=True)
+    period_end = Column(DateTime, nullable=False, index=True)
+
+    # Currency at time of invoice
+    currency_code = Column(String(3), nullable=False)
+    currency_symbol = Column(String(10), nullable=False)
+
+    # Fees at time of invoice (snapshot)
+    per_table_booking_fee = Column(Float, nullable=False)
+    per_online_booking_fee = Column(Float, nullable=False)
+
+    # Booking counts for this period
+    total_table_bookings = Column(Integer, nullable=False, default=0)
+    total_online_bookings = Column(Integer, nullable=False, default=0)
+
+    # Calculated revenue
+    table_booking_revenue = Column(Float, nullable=False, default=0.0)
+    online_booking_revenue = Column(Float, nullable=False, default=0.0)
+    total_revenue = Column(Float, nullable=False, default=0.0)
+
+    # Status
+    is_paid = Column(Boolean, default=False, nullable=False)
+    paid_at = Column(DateTime, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationship
+    restaurant = relationship("Restaurant")
+
+    def __repr__(self):
+        return f"<Invoice(id={self.id}, number={self.invoice_number}, total={self.total_revenue})>"

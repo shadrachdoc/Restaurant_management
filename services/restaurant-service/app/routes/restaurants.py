@@ -7,13 +7,16 @@ from sqlalchemy import select, func
 from typing import List
 from uuid import UUID
 from ..database import get_db
-from ..models import Restaurant, MenuItem, Table, Feedback
+from ..models import Restaurant, MenuItem, Table, Feedback, Invoice
 from ..schemas import (
     RestaurantCreate,
     RestaurantUpdate,
     RestaurantResponse,
     RestaurantBranding,
     RestaurantAnalytics,
+    RestaurantBilling,
+    InvoiceCreate,
+    InvoiceResponse,
     MessageResponse
 )
 from ..utils.slug import generate_unique_slug
@@ -331,3 +334,184 @@ async def get_restaurant_analytics(
         average_rating=round(average_rating, 2),
         menu_items_by_category=menu_items_by_category
     )
+
+
+@router.get("/{restaurant_id}/billing", response_model=RestaurantBilling)
+async def get_restaurant_billing(
+    restaurant_id: UUID,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get restaurant billing information and revenue from booking fees
+    Returns billing configuration and calculated revenue based on order counts
+    """
+    # Check if restaurant exists
+    result = await db.execute(
+        select(Restaurant).where(Restaurant.id == restaurant_id)
+    )
+    restaurant = result.scalar_one_or_none()
+
+    if not restaurant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Restaurant not found"
+        )
+
+    # TODO: In a production setup, this would query the order-service via API or shared database
+    # For now, returning mock data - actual order counting needs inter-service communication
+    total_table_bookings = 0
+    total_online_bookings = 0
+
+    # Calculate revenue based on configured fees
+    table_booking_revenue = total_table_bookings * restaurant.per_table_booking_fee if restaurant.enable_booking_fees else 0.0
+    online_booking_revenue = total_online_bookings * restaurant.per_online_booking_fee if restaurant.enable_booking_fees else 0.0
+    total_revenue = table_booking_revenue + online_booking_revenue
+
+    return RestaurantBilling(
+        restaurant_id=restaurant.id,
+        restaurant_name=restaurant.name,
+        currency_symbol=restaurant.currency_symbol,
+        enable_booking_fees=restaurant.enable_booking_fees,
+        per_table_booking_fee=restaurant.per_table_booking_fee,
+        per_online_booking_fee=restaurant.per_online_booking_fee,
+        total_table_bookings=total_table_bookings,
+        total_online_bookings=total_online_bookings,
+        table_booking_revenue=table_booking_revenue,
+        online_booking_revenue=online_booking_revenue,
+        total_revenue=total_revenue
+    )
+
+
+@router.post("/{restaurant_id}/invoices", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)
+async def generate_invoice(
+    restaurant_id: UUID,
+    invoice_data: InvoiceCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Generate invoice for a restaurant billing period
+    - Counts orders since last invoice (or restaurant creation)
+    - Creates invoice with billing data
+    - Updates restaurant.last_invoice_date to reset billing period
+    """
+    from datetime import datetime
+
+    # Check if restaurant exists
+    result = await db.execute(
+        select(Restaurant).where(Restaurant.id == restaurant_id)
+    )
+    restaurant = result.scalar_one_or_none()
+
+    if not restaurant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Restaurant not found"
+        )
+
+    # Determine billing period
+    period_start = invoice_data.period_start or restaurant.last_invoice_date or restaurant.created_at
+    period_end = invoice_data.period_end or datetime.utcnow()
+
+    # TODO: Query order-service to get actual order counts for the period
+    # For now using mock data - requires inter-service communication
+    total_table_bookings = 0
+    total_online_bookings = 0
+
+    # Calculate revenue
+    table_booking_revenue = total_table_bookings * restaurant.per_table_booking_fee if restaurant.enable_booking_fees else 0.0
+    online_booking_revenue = total_online_bookings * restaurant.per_online_booking_fee if restaurant.enable_booking_fees else 0.0
+    total_revenue = table_booking_revenue + online_booking_revenue
+
+    # Generate invoice number
+    invoice_count = await db.execute(
+        select(func.count(Invoice.id)).where(Invoice.restaurant_id == restaurant_id)
+    )
+    count = invoice_count.scalar() or 0
+    invoice_number = f"INV-{restaurant.slug.upper()}-{count + 1:05d}"
+
+    # Create invoice
+    new_invoice = Invoice(
+        restaurant_id=restaurant_id,
+        invoice_number=invoice_number,
+        period_start=period_start,
+        period_end=period_end,
+        currency_code=restaurant.currency_code,
+        currency_symbol=restaurant.currency_symbol,
+        per_table_booking_fee=restaurant.per_table_booking_fee,
+        per_online_booking_fee=restaurant.per_online_booking_fee,
+        total_table_bookings=total_table_bookings,
+        total_online_bookings=total_online_bookings,
+        table_booking_revenue=table_booking_revenue,
+        online_booking_revenue=online_booking_revenue,
+        total_revenue=total_revenue
+    )
+
+    db.add(new_invoice)
+
+    # Update restaurant's last invoice date to reset billing period
+    restaurant.last_invoice_date = period_end
+
+    await db.commit()
+    await db.refresh(new_invoice)
+
+    logger.info(f"Invoice generated: {invoice_number} for {restaurant.name}, Total: {restaurant.currency_symbol}{total_revenue:.2f}")
+
+    return new_invoice
+
+
+@router.get("/{restaurant_id}/invoices", response_model=List[InvoiceResponse])
+async def list_invoices(
+    restaurant_id: UUID,
+    skip: int = 0,
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List all invoices for a restaurant
+    """
+    # Check if restaurant exists
+    result = await db.execute(
+        select(Restaurant).where(Restaurant.id == restaurant_id)
+    )
+    restaurant = result.scalar_one_or_none()
+
+    if not restaurant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Restaurant not found"
+        )
+
+    # Fetch invoices
+    query = select(Invoice).where(Invoice.restaurant_id == restaurant_id)
+    query = query.order_by(Invoice.created_at.desc()).offset(skip).limit(limit)
+
+    invoices_result = await db.execute(query)
+    invoices = invoices_result.scalars().all()
+
+    return invoices
+
+
+@router.get("/{restaurant_id}/invoices/{invoice_id}", response_model=InvoiceResponse)
+async def get_invoice(
+    restaurant_id: UUID,
+    invoice_id: UUID,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get a specific invoice by ID
+    """
+    result = await db.execute(
+        select(Invoice).where(
+            Invoice.id == invoice_id,
+            Invoice.restaurant_id == restaurant_id
+        )
+    )
+    invoice = result.scalar_one_or_none()
+
+    if not invoice:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invoice not found"
+        )
+
+    return invoice
