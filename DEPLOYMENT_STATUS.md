@@ -363,5 +363,56 @@ Ready for production deployment.
 
 ---
 
-**Implementation Date**: December 28, 2025
+## Recent Updates (December 29, 2025)
+
+### ✅ User Creation Fix Deployed
+
+**Issue**: User creation was failing with 422 validation error when creating Restaurant Admins or Chefs.
+
+**Root Cause**: Frontend was sending role enum values in uppercase (`RESTAURANT_ADMIN`) but backend expected lowercase (`restaurant_admin`).
+
+**Fix Applied**:
+1. Updated [UserManagement.jsx](frontend/src/pages/MasterAdmin/UserManagement.jsx) to use lowercase role values
+2. Fixed empty string to `null` conversion for `restaurant_id` field
+3. Updated all role-related filters and conditional checks
+
+**Deployment**:
+- ✅ Frontend rebuilt with fix
+- ✅ New image loaded to kind cluster: `restaurant_management_frontend:latest`
+- ✅ Pod restarted with new bundle: `index-CbMao0EF.js`
+- ✅ Verified fix in deployed minified code
+
+**Test**: Create new user at https://restaurant.corpv3.com/master-admin/users
+
+---
+
+## Documentation Cleanup (December 29, 2025)
+
+### ✅ Documentation Streamlined
+
+**Removed obsolete files** (58 files):
+- Removed temporary troubleshooting docs (DOCKER_BUILD_FIX.md, PIPELINE_FIX.md, etc.)
+- Removed duplicate setup guides
+- Removed old deployment guides
+- Cleaned up scattered postman documentation
+
+**Updated core documentation**:
+- ✅ [TEST_CREDENTIALS.md](TEST_CREDENTIALS.md) - Updated with current domain and test restaurant
+- ✅ [QUICKSTART.md](QUICKSTART.md) - Rewritten for Kubernetes/Helm deployment
+- ✅ [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md) - This file
+
+**Kept essential docs**:
+- README.md - Project overview
+- QUICKSTART.md - Quick start guide
+- TEST_CREDENTIALS.md - Login credentials
+- DEPLOYMENT_STATUS.md - Deployment status
+- BILLING_INVOICE_IMPLEMENTATION_SUMMARY.md - Billing system docs
+- docs/* - Technical documentation
+- postman/README.md, postman/TESTING_GUIDE.md - API testing
+- helm/restaurant-system/README.md - Helm chart docs
+
+---
+
+**Implementation Date**: December 28-29, 2025
 **Status**: PRODUCTION READY ✅
+**Domain**: https://restaurant.corpv3.com

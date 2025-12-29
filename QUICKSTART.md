@@ -2,298 +2,251 @@
 
 Get the Restaurant Management System up and running in minutes!
 
+## 🌐 Production Access
+
+**Live URL**: https://restaurant.corpv3.com
+
+**Test Credentials**: See [TEST_CREDENTIALS.md](TEST_CREDENTIALS.md)
+- Master Admin: `admin` / `password`
+- Chef: `adminchef1` / `password`
+- Restaurant Admin: `adminres` / `password`
+
+---
+
 ## Prerequisites
 
-Ensure you have the following installed:
+For local development, ensure you have:
 
-- **Python 3.11+** - [Download](https://www.python.org/downloads/)
-- **Node.js 18+** - [Download](https://nodejs.org/)
-- **Docker & Docker Compose** - [Download](https://www.docker.com/products/docker-desktop/)
+- **Kubernetes (Kind)** - [Install](https://kind.sigs.k8s.io/)
+- **kubectl** - [Install](https://kubernetes.io/docs/tasks/tools/)
+- **Docker** - [Download](https://www.docker.com/products/docker-desktop/)
+- **Helm 3+** - [Install](https://helm.sh/docs/intro/install/)
 - **Git** - [Download](https://git-scm.com/)
 
-## 🚀 Quick Start (Local Development)
+## 🚀 Quick Start (Kubernetes Deployment)
 
-### 1. Clone and Setup
+### 1. Clone Repository
 
 ```bash
-# Clone the repository
+git clone <repository-url>
 cd Restaurant_management
-
-# Create Python virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install Python dependencies
-pip install -r requirements.txt
 ```
 
-### 2. Start Infrastructure
+### 2. Create Kind Cluster
 
 ```bash
-# Start PostgreSQL and Redis using Docker
-docker-compose up -d postgres redis
+# Create cluster
+kind create cluster --name restaurant-cluster --config infrastructure/kind/kind-config.yaml
+
+# Verify cluster
+kubectl cluster-info --context kind-restaurant-cluster
 ```
 
-### 3. Start Backend Services
-
-**Terminal 1 - Auth Service:**
-```bash
-source venv/bin/activate
-./start-auth-service.sh
-```
-
-**Terminal 2 - Restaurant Service:**
-```bash
-source venv/bin/activate
-./start-restaurant-service.sh
-```
-
-### 4. Start Frontend
-
-**Terminal 3 - Frontend:**
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### 5. Access the Application
-
-Once all services are running:
-
-- **Frontend**: http://localhost:3000
-- **Auth Service API Docs**: http://localhost:8001/docs
-- **Restaurant Service API Docs**: http://localhost:8003/docs
-
-## 🐳 Docker Deployment (Alternative)
-
-### Using Docker Compose
+### 3. Deploy with Helm
 
 ```bash
-# Start all services
-docker-compose up -d
+# Create namespace
+kubectl create namespace restaurant-system
 
-# View logs
-docker-compose logs -f
+# Install Helm chart
+helm install restaurant-system ./helm/restaurant-system -n restaurant-system
 
-# Stop services
-docker-compose down
+# Watch pods start
+kubectl get pods -n restaurant-system -w
 ```
 
-## ☸️ Kubernetes Deployment
-
-For production deployment using Kubernetes, see [K8S_DEPLOYMENT.md](K8S_DEPLOYMENT.md).
-
-### Quick K8s Deployment
+### 4. Access the Application
 
 ```bash
-# 1. Login to DockerHub
-docker login
-
-# 2. Set your DockerHub username
-export DOCKERHUB_USERNAME=your_dockerhub_username
-
-# 3. Clean up old services (if any)
-./cleanup-old-services.sh
-
-# 4. Deploy to Kubernetes
-./deploy-to-dockerhub.sh
-
-# 5. Access the application
-kubectl port-forward -n restaurant-system service/frontend 3000:3000
+# Port-forward frontend
+kubectl port-forward -n restaurant-system svc/frontend 80:80
 ```
 
-Then visit http://localhost:3000
+Then visit **http://localhost** or setup ingress for https://restaurant.corpv3.com
 
-## 📝 Creating Your First Restaurant
+### 5. Login
 
-### Option 1: Using the Frontend
+Use credentials from [TEST_CREDENTIALS.md](TEST_CREDENTIALS.md):
+- **URL**: http://localhost (or https://restaurant.corpv3.com)
+- **Master Admin**: `admin` / `password`
+- **Chef**: `adminchef1` / `password`
+- **Restaurant Admin**: `adminres` / `password`
 
-1. Go to http://localhost:3000
-2. Click "Sign Up"
-3. Create a MASTER_ADMIN account
-4. Login and create your restaurant
-5. Add menu items, tables, and staff
+## 📝 Test Restaurant Already Available
 
-### Option 2: Using API Documentation
+The system comes with a pre-configured test restaurant:
 
-1. Go to http://localhost:8001/docs
-2. Create a Master Admin user via `/api/v1/auth/signup`:
-```json
-{
-  "username": "admin",
-  "email": "admin@restaurant.com",
-  "password": "Admin@123456",
-  "role": "MASTER_ADMIN",
-  "full_name": "System Administrator"
-}
-```
-3. Login to get JWT token via `/api/v1/auth/login`
-4. Use token to create restaurants and manage system
+**Restaurant**: phalwan Briyani
+- **ID**: `52c0d315-b894-40c6-be52-3416a9d0a1e7`
+- **Currency**: INR (₹)
+- **Billing**: Enabled (₹10 table / ₹15 online)
+- **Menu**: 8 items (Biryani varieties)
+- **Tables**: 5 tables (T1-T5)
+- **Orders**: 240 test orders (16 days)
 
-### Option 3: Using cURL
+### Creating Additional Restaurants
 
-```bash
-# 1. Create Master Admin
-curl -X POST http://localhost:8001/api/v1/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "admin",
-    "email": "admin@restaurant.com",
-    "password": "Admin@123456",
-    "role": "MASTER_ADMIN",
-    "full_name": "System Administrator"
-  }'
-
-# 2. Login
-curl -X POST http://localhost:8001/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "admin",
-    "password": "Admin@123456"
-  }'
-
-# Save the access_token from response
-
-# 3. Create Restaurant
-curl -X POST http://localhost:8003/api/v1/restaurants \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
-  -d '{
-    "name": "My Restaurant",
-    "address": "123 Main St",
-    "phone": "+1234567890",
-    "email": "info@myrestaurant.com"
-  }'
-```
+1. Login as Master Admin: https://restaurant.corpv3.com/master-admin
+2. Click "Create Restaurant"
+3. Fill in details:
+   - Name, Description, Address
+   - Country & Currency (auto-detected)
+   - Billing fees (optional)
+4. Restaurant is created with unique slug
+5. Assign admins/chefs via User Management
 
 ## 🔍 Troubleshooting
 
-### Services won't start
+### Pods not starting
 
 ```bash
-# Check Docker is running
-docker info
+# Check pod status
+kubectl get pods -n restaurant-system
 
-# View service logs
-docker-compose logs -f postgres
-docker-compose logs -f redis
+# Describe pod for errors
+kubectl describe pod -n restaurant-system <pod-name>
 
-# Restart specific service
-docker-compose restart postgres
+# Check logs
+kubectl logs -n restaurant-system <pod-name> --tail=50
+
+# Restart deployment
+kubectl rollout restart deployment/<deployment-name> -n restaurant-system
 ```
 
 ### Database connection issues
 
 ```bash
-# Check PostgreSQL is running
-docker-compose ps postgres
+# Check PostgreSQL pod
+kubectl get pods -n restaurant-system | grep postgres
 
 # Check PostgreSQL logs
-docker-compose logs postgres
+kubectl logs -n restaurant-system -l app=postgres
 
-# Connect to PostgreSQL directly
-docker-compose exec postgres psql -U restaurant_admin -d restaurant_db
-```
-
-### Port already in use
-
-```bash
-# Find process using port (e.g., 8001)
-lsof -i :8001
-
-# Kill the process
-kill -9 [PID]
+# Connect to PostgreSQL
+kubectl exec -it -n restaurant-system deployment/postgres -- psql -U restaurant_admin -d restaurant_db
 ```
 
 ### Frontend not loading
 
 ```bash
-# Check if backend services are running
-curl http://localhost:8001/health
-curl http://localhost:8003/health
+# Check frontend pod
+kubectl get pods -n restaurant-system -l app=frontend
 
-# Check frontend build
-cd frontend
-npm run build
+# Check frontend logs
+kubectl logs -n restaurant-system -l app=frontend
+
+# Restart frontend
+kubectl delete pod -n restaurant-system -l app=frontend
+```
+
+### Image pull errors
+
+```bash
+# Check image pull policy
+kubectl get deployment -n restaurant-system <deployment-name> -o yaml | grep -i image
+
+# Load local images to kind
+kind load docker-image <image-name>:latest --name restaurant-cluster
+
+# Set imagePullPolicy to IfNotPresent
+kubectl set image deployment/<name> <container>=<image> -n restaurant-system
+kubectl patch deployment/<name> -n restaurant-system -p '{"spec":{"template":{"spec":{"containers":[{"name":"<container>","imagePullPolicy":"IfNotPresent"}]}}}}'
 ```
 
 ## 🧪 Testing the API
 
-### Health Check
+### Health Check via Port-Forward
 
 ```bash
-# Auth Service
-curl http://localhost:8001/health
+# Port-forward API Gateway
+kubectl port-forward -n restaurant-system svc/api-gateway 8000:8000
 
-# Restaurant Service
-curl http://localhost:8003/health
+# Test health endpoints
+curl http://localhost:8000/health
+curl http://localhost:8000/api/v1/auth/health
+curl http://localhost:8000/api/v1/restaurants/health
 ```
 
-### Create Restaurant Admin
+### Access API Docs
 
 ```bash
-curl -X POST http://localhost:8001/api/v1/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "restaurant_admin_1",
-    "email": "admin@myrestaurant.com",
-    "password": "SecurePass123!",
-    "role": "RESTAURANT_ADMIN",
-    "full_name": "John Doe"
-  }'
+# Port-forward API Gateway
+kubectl port-forward -n restaurant-system svc/api-gateway 8000:8000
+
+# Open in browser
+# - Swagger UI: http://localhost:8000/docs
+# - ReDoc: http://localhost:8000/redoc
 ```
 
 ## 📚 Next Steps
 
-1. **Explore API Documentation**:
-   - Auth Service: http://localhost:8001/docs
-   - Restaurant Service: http://localhost:8003/docs
+1. **Explore the System**:
+   - Master Admin Dashboard: https://restaurant.corpv3.com/master-admin
+   - User Management: Create new users and assign roles
+   - Billing & Invoices: Generate invoices for restaurants
 
-2. **Read the Full README**: [README.md](README.md)
+2. **API Documentation**:
+   - Port-forward: `kubectl port-forward -n restaurant-system svc/api-gateway 8000:8000`
+   - Swagger UI: http://localhost:8000/docs
 
-3. **Kubernetes Deployment**: [K8S_DEPLOYMENT.md](K8S_DEPLOYMENT.md)
-
-4. **Frontend Guide**: [FRONTEND_SETUP.md](FRONTEND_SETUP.md)
+3. **Read Documentation**:
+   - [README.md](README.md) - Full project overview
+   - [TEST_CREDENTIALS.md](TEST_CREDENTIALS.md) - Login credentials
+   - [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md) - Billing system details
+   - [BILLING_INVOICE_IMPLEMENTATION_SUMMARY.md](BILLING_INVOICE_IMPLEMENTATION_SUMMARY.md) - Invoice system
 
 ## 🛑 Stopping Services
 
-### Stop all Docker services
+### Uninstall Helm release
 
 ```bash
-docker-compose down
+helm uninstall restaurant-system -n restaurant-system
 ```
 
-### Stop and remove volumes (careful - deletes data!)
+### Delete namespace
 
 ```bash
-docker-compose down -v
+kubectl delete namespace restaurant-system
 ```
 
-### Stop individual Python services
-
-Press `Ctrl+C` in each terminal running a service.
-
-## 💡 Useful Commands
+### Delete Kind cluster
 
 ```bash
-# View all running Docker containers
-docker-compose ps
+kind delete cluster --name restaurant-cluster
+```
 
-# View logs for all services
-docker-compose logs -f
+## 💡 Useful Kubernetes Commands
 
-# View logs for specific service
-docker-compose logs -f auth-service
+```bash
+# View all pods
+kubectl get pods -n restaurant-system
 
-# Rebuild specific service
-docker-compose up -d --build auth-service
+# View services
+kubectl get svc -n restaurant-system
 
-# Execute command in container
-docker-compose exec postgres psql -U restaurant_admin -d restaurant_db
+# View deployments
+kubectl get deployments -n restaurant-system
 
-# Check Redis
-docker-compose exec redis redis-cli ping
+# Watch pods in real-time
+kubectl get pods -n restaurant-system -w
+
+# View logs
+kubectl logs -n restaurant-system <pod-name> --tail=100 -f
+
+# Execute command in pod
+kubectl exec -it -n restaurant-system <pod-name> -- /bin/sh
+
+# Port-forward service
+kubectl port-forward -n restaurant-system svc/<service-name> 8000:8000
+
+# Restart deployment
+kubectl rollout restart deployment/<name> -n restaurant-system
+
+# Check Helm releases
+helm list -n restaurant-system
+
+# Update Helm release
+helm upgrade restaurant-system ./helm/restaurant-system -n restaurant-system
 ```
 
 ## 📂 Project Structure
@@ -301,45 +254,51 @@ docker-compose exec redis redis-cli ping
 ```
 Restaurant_management/
 ├── services/
-│   ├── auth-service/          # Authentication & user management (Port 8001)
-│   └── restaurant-service/    # Restaurant operations (Port 8003)
-├── frontend/                  # React application (Port 3000)
-├── infrastructure/
-│   └── kubernetes/           # Kubernetes manifests
+│   ├── auth-service/          # Authentication (Port 8001)
+│   ├── restaurant-service/    # Restaurant ops (Port 8003)
+│   ├── order-service/         # Orders & analytics (Port 8004)
+│   ├── customer-service/      # Customer management (Port 8007)
+│   └── api-gateway/           # API Gateway (Port 8000)
+├── frontend/                  # React application
+├── helm/
+│   └── restaurant-system/    # Helm chart
 ├── shared/                   # Shared models & utilities
-├── scripts/                  # Deployment scripts
-├── deploy-to-dockerhub.sh   # K8s deployment script
-├── cleanup-old-services.sh  # Cleanup script
-└── K8S_DEPLOYMENT.md        # K8s deployment guide
+└── docs/                     # Documentation
 ```
 
 ## 🎯 Available Services
 
-### Backend Services
-- **Auth Service** (Port 8001): User authentication, JWT tokens, user management
-- **Restaurant Service** (Port 8003): Restaurants, menus, tables, orders, feedback
+### Backend Microservices (Kubernetes)
+- **API Gateway** (Port 8000): Routes requests to services
+- **Auth Service** (Port 8001): JWT authentication, user management
+- **Restaurant Service** (Port 8003): Restaurants, menus, tables, billing, invoices
+- **Order Service** (Port 8004): Orders, analytics, predictions
+- **Customer Service** (Port 8007): Customer registration and profiles
 
 ### Frontend
-- **React App** (Port 3000): Complete admin dashboard and customer interface
+- **React App** (Port 80): Complete dashboard (Master Admin, Chef, Restaurant Admin)
 
 ### Infrastructure
-- **PostgreSQL** (Port 5432): Database
-- **Redis** (Port 6379): Cache
+- **PostgreSQL**: Shared database
+- **Redis**: Cache and sessions
+- **RabbitMQ**: Message queue
 
 ## 👥 User Roles
 
-- **MASTER_ADMIN**: Full system access, manage all restaurants
-- **RESTAURANT_ADMIN**: Manage own restaurant, menu, tables, staff, orders
-- **CHEF**: View and update orders for their restaurant
-- **CUSTOMER**: Place orders, provide feedback
+- **master_admin**: Full system access, manage all restaurants, billing, invoices
+- **restaurant_admin**: Manage restaurant, menu, tables, staff, orders
+- **chef**: View and update orders, kitchen operations
+- **customer**: Place orders, provide feedback
 
 ## 🆘 Getting Help
 
-- **Documentation**: Check the `docs/` folder
-- **API Issues**: Review API docs at http://localhost:8001/docs or http://localhost:8003/docs
-- **K8s Deployment**: See [K8S_DEPLOYMENT.md](K8S_DEPLOYMENT.md)
-- **GitHub Issues**: Report bugs or request features
+- **Test Credentials**: [TEST_CREDENTIALS.md](TEST_CREDENTIALS.md)
+- **Billing System**: [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md)
+- **Documentation**: `docs/` folder
+- **Production**: https://restaurant.corpv3.com
 
 ---
 
-Happy coding! 🎉
+**Last Updated**: December 29, 2025
+**Environment**: Kubernetes (Kind) + Helm
+**Domain**: https://restaurant.corpv3.com
