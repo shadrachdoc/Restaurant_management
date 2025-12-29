@@ -14,6 +14,7 @@ const CheckoutPage = () => {
   const [loading, setLoading] = useState(false);
   const [customer, setCustomer] = useState(null);
   const [orderType, setOrderType] = useState('dine_in');
+  const [tableInfo, setTableInfo] = useState(null);
 
   const [orderData, setOrderData] = useState({
     customer_name: '',
@@ -24,8 +25,9 @@ const CheckoutPage = () => {
     special_instructions: ''
   });
 
-  // Load customer from localStorage
+  // Load customer from localStorage and table from sessionStorage or URL
   useEffect(() => {
+    // Load customer if logged in
     const storedCustomer = localStorage.getItem('customer');
     if (storedCustomer) {
       const customerData = JSON.parse(storedCustomer);
@@ -39,6 +41,32 @@ const CheckoutPage = () => {
         customer_email: customerData.email || '',
         delivery_address: customerData.default_delivery_address || ''
       }));
+    }
+
+    // Load table info from sessionStorage (QR scan flow)
+    const savedTableInfo = sessionStorage.getItem('currentTable');
+    if (savedTableInfo) {
+      const table = JSON.parse(savedTableInfo);
+      setTableInfo(table);
+      setOrderData(prev => ({
+        ...prev,
+        table_number: table.tableNumber
+      }));
+      setOrderType('dine_in'); // Force dine-in if scanned from table
+    }
+    // Also check URL parameters (direct QR link)
+    else if (searchParams.get('table') && searchParams.get('tableNumber')) {
+      const tableFromUrl = {
+        tableId: searchParams.get('table'),
+        tableNumber: searchParams.get('tableNumber'),
+        restaurantId: restaurantId
+      };
+      setTableInfo(tableFromUrl);
+      setOrderData(prev => ({
+        ...prev,
+        table_number: tableFromUrl.tableNumber
+      }));
+      setOrderType('dine_in'); // Force dine-in if from table QR URL
     }
   }, []);
 
@@ -68,15 +96,33 @@ const CheckoutPage = () => {
       const tax = subtotal * 0.1;
       const total = subtotal + tax;
 
-      // Create order
+      // Generate guest name if not provided
+      let customerName = orderData.customer_name.trim();
+      if (!customerName) {
+        const guestNumber = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+        customerName = `Guest-${guestNumber}`;
+      }
+
+      // Generate guest phone if not provided
+      let customerPhone = orderData.customer_phone.trim();
+      if (!customerPhone) {
+        customerPhone = 'Not provided';
+      }
+
+      // Map frontend order types to backend enum values
+      // Frontend: dine_in, takeout, delivery
+      // Backend: table, online
+      const backendOrderType = orderType === 'dine_in' ? 'table' : 'online';
+
+      // Create order payload
       const orderPayload = {
         restaurant_id: restaurantId,
-        customer_name: orderData.customer_name,
-        customer_phone: orderData.customer_phone,
+        customer_name: customerName,
+        customer_phone: customerPhone,
         customer_email: orderData.customer_email || null,
-        order_type: orderType,
+        order_type: backendOrderType,
         delivery_address: orderType === 'delivery' ? orderData.delivery_address : null,
-        table_id: null, // For now, no table selection
+        table_id: tableInfo?.tableId || null, // Use table from QR scan
         items: orderItems,
         subtotal: subtotal.toFixed(2),
         tax: tax.toFixed(2),
@@ -131,45 +177,60 @@ const CheckoutPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Order Details Form */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Order Type */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold mb-4">Order Type</h2>
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setOrderType('dine_in')}
-                    className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
-                      orderType === 'dine_in'
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    🍽️ Dine In
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOrderType('takeout')}
-                    className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
-                      orderType === 'takeout'
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    🛍️ Takeout
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOrderType('delivery')}
-                    className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
-                      orderType === 'delivery'
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    🚚 Delivery
-                  </button>
+              {/* Table Info Banner (if from QR scan) */}
+              {tableInfo && (
+                <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg shadow p-6">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">🍽️</span>
+                    <div>
+                      <p className="font-bold text-lg">Table {tableInfo.tableNumber}</p>
+                      <p className="text-sm opacity-90">Your order will be delivered to this table</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Order Type */}
+              {!tableInfo && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-xl font-semibold mb-4">Order Type</h2>
+                  <div className="flex gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setOrderType('dine_in')}
+                      className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
+                        orderType === 'dine_in'
+                          ? 'border-blue-600 bg-blue-50 text-blue-700'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      🍽️ Dine In
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOrderType('takeout')}
+                      className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
+                        orderType === 'takeout'
+                          ? 'border-blue-600 bg-blue-50 text-blue-700'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      🛍️ Takeout
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOrderType('delivery')}
+                      className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
+                        orderType === 'delivery'
+                          ? 'border-blue-600 bg-blue-50 text-blue-700'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      🚚 Delivery
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Customer Information */}
               <div className="bg-white rounded-lg shadow p-6">
@@ -192,33 +253,33 @@ const CheckoutPage = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name *
+                      Full Name {customer ? '*' : '(Optional - Guest order)'}
                     </label>
                     <input
                       type="text"
-                      required
+                      required={!!customer}
                       value={orderData.customer_name}
                       onChange={(e) =>
                         setOrderData({ ...orderData, customer_name: e.target.value })
                       }
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="John Doe"
+                      placeholder={customer ? "John Doe" : "Optional - Auto-generated if empty"}
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number *
+                      Phone Number {customer ? '*' : '(Optional - Guest order)'}
                     </label>
                     <input
                       type="tel"
-                      required
+                      required={!!customer}
                       value={orderData.customer_phone}
                       onChange={(e) =>
                         setOrderData({ ...orderData, customer_phone: e.target.value })
                       }
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="+1234567890"
+                      placeholder={customer ? "+1234567890" : "Optional"}
                     />
                   </div>
 
@@ -255,7 +316,7 @@ const CheckoutPage = () => {
                     </div>
                   )}
 
-                  {orderType === 'dine_in' && (
+                  {orderType === 'dine_in' && !tableInfo && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Table Number (Optional)

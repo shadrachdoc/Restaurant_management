@@ -78,15 +78,15 @@ async def lock_table(restaurant_id: UUID, table_id: UUID) -> bool:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.patch(
-                f"{RESTAURANT_SERVICE_URL}/api/v1/restaurants/{restaurant_id}/tables/{table_id}",
-                json={"status": "occupied"},
+                f"{RESTAURANT_SERVICE_URL}/api/v1/restaurants/{restaurant_id}/tables/{table_id}/status",
+                params={"new_status": "occupied"},
                 timeout=5.0
             )
             if response.status_code == 200:
                 logger.info(f"Table {table_id} locked successfully")
                 return True
             else:
-                logger.warning(f"Failed to lock table {table_id}: {response.status_code}")
+                logger.warning(f"Failed to lock table {table_id}: {response.status_code} - {response.text}")
                 return False
     except Exception as e:
         logger.error(f"Error locking table {table_id}: {e}")
@@ -98,15 +98,15 @@ async def unlock_table(restaurant_id: UUID, table_id: UUID) -> bool:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.patch(
-                f"{RESTAURANT_SERVICE_URL}/api/v1/restaurants/{restaurant_id}/tables/{table_id}",
-                json={"status": "available"},
+                f"{RESTAURANT_SERVICE_URL}/api/v1/restaurants/{restaurant_id}/tables/{table_id}/status",
+                params={"new_status": "available"},
                 timeout=5.0
             )
             if response.status_code == 200:
                 logger.info(f"Table {table_id} unlocked successfully")
                 return True
             else:
-                logger.warning(f"Failed to unlock table {table_id}: {response.status_code}")
+                logger.warning(f"Failed to unlock table {table_id}: {response.status_code} - {response.text}")
                 return False
     except Exception as e:
         logger.error(f"Error unlocking table {table_id}: {e}")
@@ -293,7 +293,7 @@ async def update_order_status(
     """
     Update order status (CHEF/ADMIN only)
     Status flow: PENDING → CONFIRMED → PREPARING → READY → SERVED → COMPLETED
-    When order is marked as SERVED or COMPLETED, the table is automatically unlocked
+    Table remains OCCUPIED until receipt is generated
     """
     result = await db.execute(
         select(Order)
@@ -312,20 +312,63 @@ async def update_order_status(
     order.status = status_update.status
 
     # Set timestamps based on status
-    if status_update.status == OrderStatus.CONFIRMED:
-        order.confirmed_at = datetime.utcnow()
-    elif status_update.status in [OrderStatus.COMPLETED, OrderStatus.CANCELLED]:
+    if status_update.status in [OrderStatus.COMPLETED, OrderStatus.CANCELLED]:
         order.completed_at = datetime.utcnow()
-
-    # When order is served or completed, unlock the table
-    if status_update.status in [OrderStatus.SERVED, OrderStatus.COMPLETED] and order.table_id:
-        await unlock_table(order.restaurant_id, order.table_id)
-        logger.info(f"Table {order.table_id} unlocked after order {order.order_number} marked as {status_update.status}")
 
     await db.commit()
     await db.refresh(order)
 
     logger.info(f"Order {order.order_number} status updated to {status_update.status}")
+
+    return order
+
+
+@router.post("/orders/{order_id}/generate-receipt", response_model=OrderResponse)
+async def generate_receipt(
+    order_id: UUID,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Generate receipt for an order and unlock the table
+    This endpoint should be called by customer or admin after payment is completed
+    """
+    result = await db.execute(
+        select(Order)
+        .options(selectinload(Order.items))
+        .where(Order.id == order_id)
+    )
+    order = result.scalar_one_or_none()
+
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found"
+        )
+
+    # Only allow receipt generation for SERVED or COMPLETED orders
+    if order.status not in [OrderStatus.SERVED, OrderStatus.COMPLETED]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot generate receipt for order with status: {order.status}. Order must be SERVED or COMPLETED."
+        )
+
+    # Mark order as completed if it was just SERVED
+    if order.status == OrderStatus.SERVED:
+        order.status = OrderStatus.COMPLETED
+        order.completed_at = datetime.utcnow()
+
+    # Unlock the table when receipt is generated
+    if order.table_id:
+        table_unlocked = await unlock_table(order.restaurant_id, order.table_id)
+        if table_unlocked:
+            logger.info(f"Table {order.table_id} unlocked after receipt generated for order {order.order_number}")
+        else:
+            logger.warning(f"Failed to unlock table {order.table_id} for order {order.order_number}")
+
+    await db.commit()
+    await db.refresh(order)
+
+    logger.info(f"Receipt generated for order {order.order_number}")
 
     return order
 
@@ -337,6 +380,7 @@ async def cancel_order(
 ):
     """
     Cancel an order (mark as CANCELLED)
+    Also unlocks the table if it was locked
     """
     result = await db.execute(
         select(Order).where(Order.id == order_id)
@@ -357,6 +401,11 @@ async def cancel_order(
 
     order.status = OrderStatus.CANCELLED
     order.completed_at = datetime.utcnow()
+
+    # Unlock table when order is cancelled
+    if order.table_id:
+        await unlock_table(order.restaurant_id, order.table_id)
+        logger.info(f"Table {order.table_id} unlocked after order {order.order_number} was cancelled")
 
     await db.commit()
 

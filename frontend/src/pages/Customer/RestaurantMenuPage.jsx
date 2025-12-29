@@ -14,8 +14,26 @@ const RestaurantMenuPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showCart, setShowCart] = useState(false);
+  const [tableInfo, setTableInfo] = useState(null);
 
   const { items, addItem, removeItem, updateQuantity, getItemCount, getGrandTotal, clearCart } = useCartStore();
+
+  // Load table info from URL parameters
+  useEffect(() => {
+    const tableId = searchParams.get('table');
+    const tableNumber = searchParams.get('tableNumber');
+
+    if (tableId && tableNumber) {
+      const tableData = {
+        tableId,
+        tableNumber,
+        restaurantId: restaurant?.id
+      };
+      setTableInfo(tableData);
+      // Store in sessionStorage for checkout page
+      sessionStorage.setItem('currentTable', JSON.stringify(tableData));
+    }
+  }, [searchParams, restaurant]);
 
   // Fetch restaurant and menu
   useEffect(() => {
@@ -107,6 +125,17 @@ const RestaurantMenuPage = () => {
         style={{ backgroundColor: restaurant?.theme_color || '#2563eb' }}
       >
         <div className="container mx-auto px-4 py-8">
+          {/* Table Info Banner (if from QR scan) */}
+          {tableInfo && (
+            <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg px-6 py-3 mb-6 flex items-center gap-3">
+              <span className="text-3xl">🍽️</span>
+              <div>
+                <p className="font-bold text-lg">Table {tableInfo.tableNumber}</p>
+                <p className="text-sm opacity-90">Your order will be delivered to this table</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {restaurant?.logo_url && (

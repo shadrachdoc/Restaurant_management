@@ -9,6 +9,7 @@ const OrderTrackingPage = () => {
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [generatingReceipt, setGeneratingReceipt] = useState(false);
 
   // Fetch order details
   useEffect(() => {
@@ -75,6 +76,25 @@ const OrderTrackingPage = () => {
     if (index < currentIndex) return 'bg-green-500';
     if (index === currentIndex) return 'bg-blue-500';
     return 'bg-gray-300';
+  };
+
+  const handleGenerateReceipt = async () => {
+    if (!confirm('Generate receipt and free up the table? This action cannot be undone.')) {
+      return;
+    }
+
+    setGeneratingReceipt(true);
+    try {
+      const response = await axios.post(`/api/v1/orders/${orderId}/generate-receipt`);
+      setOrder(response.data);
+      toast.success('Receipt generated! Table is now available.');
+    } catch (error) {
+      console.error('Failed to generate receipt:', error);
+      const errorMsg = error.response?.data?.detail || 'Failed to generate receipt';
+      toast.error(errorMsg);
+    } finally {
+      setGeneratingReceipt(false);
+    }
   };
 
   if (loading) {
@@ -253,19 +273,42 @@ const OrderTrackingPage = () => {
         )}
 
         {/* Actions */}
-        <div className="flex gap-4">
-          <button
-            onClick={() => navigate(`/customer/menu?restaurant=${order.restaurant_slug}`)}
-            className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
-            Order Again
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
-          >
-            Print Receipt
-          </button>
+        <div className="space-y-4">
+          {/* Generate Receipt Button - Only show for SERVED orders */}
+          {order.status === 'SERVED' && (
+            <button
+              onClick={handleGenerateReceipt}
+              disabled={generatingReceipt}
+              className="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {generatingReceipt ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  Generating Receipt...
+                </>
+              ) : (
+                <>
+                  ✅ Generate Receipt & Free Table
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Other Actions */}
+          <div className="flex gap-4">
+            <button
+              onClick={() => navigate(`/customer/menu?restaurant=${order.restaurant_slug}`)}
+              className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
+              Order Again
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+            >
+              Print Receipt
+            </button>
+          </div>
         </div>
 
         {/* Support */}

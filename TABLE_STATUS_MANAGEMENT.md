@@ -200,6 +200,30 @@ Each table card shows:
    - Quick link to Table Management page
    - Shows: Available (green), Occupied (red), Reserved (yellow), Cleaning (blue)
 
+**File 3**: `frontend/src/pages/Customer/CheckoutPage.jsx`
+
+**Changes**:
+1. Added table info from QR scan (lines 17, 47-56)
+   - Load `tableInfo` from sessionStorage
+   - Auto-fill table number when scanned from QR code
+   - Force order type to 'dine_in' when table detected
+
+2. Updated order placement logic (lines 85-106)
+   - Generate unique guest name (Guest-XXXX) if not provided
+   - Use "Not provided" for phone if empty
+   - Send `table_id` from QR scan to lock table
+   - Optional fields for guest orders
+
+3. Updated UI for QR scan workflow (lines 162-172)
+   - Show green banner with table number when from QR scan
+   - Hide order type selection when table detected
+   - Hide table number input when from QR scan
+
+4. Made guest checkout optional (lines 237, 241, 253, 257)
+   - Name and phone optional for guests
+   - Required only for logged-in customers
+   - Auto-generated values if empty
+
 ---
 
 ## API Endpoints Used
@@ -463,25 +487,38 @@ All changes are local and ready to commit.
 M  services/order-service/app/routes/orders.py
 M  frontend/src/pages/Admin/TableManagement.jsx
 M  frontend/src/pages/Admin/AdminDashboard.jsx
+M  frontend/src/pages/Customer/CheckoutPage.jsx
 A  TABLE_STATUS_MANAGEMENT.md
 ```
 
 ### Suggested Commit Message:
 ```
-feat: Add table status management with automatic lock/unlock
+feat: Add table status management with QR code checkout and guest ordering
 
-- Implement color-coded table status indicators (green/red/yellow/blue)
-- Auto-lock tables when order created (PENDING → occupied)
-- Auto-unlock tables when order served/completed (SERVED → available)
-- Add manual unlock button for restaurant admin dashboard
-- Add inter-service HTTP calls from order-service to restaurant-service
+Backend:
+- Auto-lock tables when order created (order-service → restaurant-service)
+- Auto-unlock tables when chef marks order as served/completed
+- Inter-service HTTP calls for table status updates
+- Comprehensive logging for audit trail
+
+Frontend - Admin:
+- Color-coded table status indicators (green/red/yellow/blue)
+- Manual unlock button for occupied tables in Table Management
+- Live table status overview widget on Admin Dashboard
+- Quick status toggle buttons
+
+Frontend - Customer:
+- QR code scan auto-fills table and locks it
+- Guest ordering with optional name/phone fields
+- Auto-generate guest names (Guest-XXXX) if empty
+- Table info banner when ordering from QR scan
+- Hide order type selection when from table QR
 
 Features:
-- Visual table status with color badges
-- Automatic table lifecycle management
-- Manual admin override for table unlock
-- Comprehensive logging for audit trail
-- Preserved existing QR code and table management features
+- Complete automatic table lifecycle management
+- Guest checkout without login required
+- Visual feedback for table status across all interfaces
+- Seamless QR code → order → table lock workflow
 
 Ready for production use.
 

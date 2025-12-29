@@ -23,6 +23,12 @@ class UserCreate(UserBase):
     restaurant_id: Optional[UUID4] = None
 
 
+class StaffCreate(UserBase):
+    """Schema for staff creation (chef/customer) by restaurant admin"""
+    password: str = Field(..., min_length=8, max_length=100)
+    restaurant_id: UUID4
+
+
 class UserUpdate(BaseModel):
     """Schema for user update"""
     full_name: Optional[str] = None
@@ -103,11 +109,22 @@ class PasswordChange(BaseModel):
     new_password: str = Field(..., min_length=8, max_length=100)
 
 
+class PasswordVerifyRequest(BaseModel):
+    """Schema for password verification"""
+    password: str
+
+
 # Response Schemas
 class MessageResponse(BaseModel):
     """Generic message response"""
     message: str
     detail: Optional[str] = None
+
+
+class PasswordVerifyResponse(BaseModel):
+    """Schema for password verification response"""
+    valid: bool
+    message: str
 
 
 class ErrorResponse(BaseModel):
