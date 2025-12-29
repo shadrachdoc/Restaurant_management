@@ -59,12 +59,12 @@ const OrderTrackingPage = () => {
 
   // Order status timeline
   const statuses = [
-    { key: 'PENDING', label: 'Order Placed', icon: '📝', color: 'blue' },
-    { key: 'CONFIRMED', label: 'Confirmed', icon: '✅', color: 'green' },
-    { key: 'PREPARING', label: 'Preparing', icon: '👨‍🍳', color: 'yellow' },
-    { key: 'READY', label: 'Ready', icon: '✨', color: 'purple' },
-    { key: 'SERVED', label: 'Served', icon: '🍽️', color: 'indigo' },
-    { key: 'COMPLETED', label: 'Completed', icon: '🎉', color: 'green' }
+    { key: 'pending', label: 'Order Placed', icon: '📝', color: 'blue' },
+    { key: 'confirmed', label: 'Confirmed', icon: '✅', color: 'green' },
+    { key: 'preparing', label: 'Preparing', icon: '👨‍🍳', color: 'yellow' },
+    { key: 'ready', label: 'Ready', icon: '✨', color: 'purple' },
+    { key: 'served', label: 'Served', icon: '🍽️', color: 'indigo' },
+    { key: 'completed', label: 'Completed', icon: '🎉', color: 'green' }
   ];
 
   const getCurrentStatusIndex = () => {
@@ -125,7 +125,7 @@ const OrderTrackingPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-8 pb-24">
       <div className="container mx-auto px-4 max-w-3xl">
         {/* Header */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -215,7 +215,7 @@ const OrderTrackingPage = () => {
           </div>
 
           {/* Estimated Time */}
-          {order.status !== 'COMPLETED' && (
+          {order.status !== 'completed' && (
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-800">
                 ⏱️ Estimated time: <strong>15-20 minutes</strong>
@@ -273,13 +273,15 @@ const OrderTrackingPage = () => {
         )}
 
         {/* Actions */}
-        <div className="space-y-4">
+        <div className="bg-white rounded-lg shadow p-6 space-y-4">
+          <h2 className="text-xl font-semibold mb-4">Actions</h2>
+
           {/* Generate Receipt Button - Only show for SERVED orders */}
-          {order.status === 'SERVED' && (
+          {order.status === 'served' && (
             <button
               onClick={handleGenerateReceipt}
               disabled={generatingReceipt}
-              className="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg shadow-md"
             >
               {generatingReceipt ? (
                 <>
@@ -295,18 +297,18 @@ const OrderTrackingPage = () => {
           )}
 
           {/* Other Actions */}
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <button
               onClick={() => navigate(`/customer/menu?restaurant=${order.restaurant_slug}`)}
-              className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              className="flex-1 bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md"
             >
-              Order Again
+              🍽️ Order Again
             </button>
             <button
               onClick={() => window.print()}
-              className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+              className="flex-1 bg-gray-600 text-white py-4 rounded-lg font-semibold hover:bg-gray-700 transition-colors shadow-md"
             >
-              Print Receipt
+              🖨️ Print Receipt
             </button>
           </div>
         </div>

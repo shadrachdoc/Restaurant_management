@@ -174,4 +174,5 @@ export const orderAPI = {
   create: (data) => restaurantApi.post('/api/v1/orders', data),
   updateStatus: (orderId, status) => restaurantApi.patch(`/api/v1/orders/${orderId}/status`, { status }),
   cancel: (orderId) => restaurantApi.delete(`/api/v1/orders/${orderId}`),
+  generateReceipt: (orderId) => restaurantApi.post(`/api/v1/orders/${orderId}/generate-receipt`),
 };

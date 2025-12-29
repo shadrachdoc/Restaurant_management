@@ -128,7 +128,7 @@ const CheckoutPage = () => {
         tax: tax.toFixed(2),
         total: total.toFixed(2),
         special_instructions: orderData.special_instructions,
-        status: 'PENDING'
+        status: 'pending'
       };
 
       console.log('Placing order:', orderPayload);
