@@ -74,6 +74,19 @@ export default function TableManagement() {
     }
   };
 
+  const unlockTable = async (table) => {
+    if (!confirm(`Unlock Table ${table.table_number}? This will clear any pending orders and make the table available.`)) {
+      return;
+    }
+
+    try {
+      await updateStatus(table.id, 'available');
+      toast.success(`Table ${table.table_number} unlocked and ready for new orders!`);
+    } catch (error) {
+      toast.error('Failed to unlock table');
+    }
+  };
+
   const handleDelete = async (table) => {
     if (!confirm(`Are you sure you want to delete Table ${table.table_number}? This action cannot be undone.`)) {
       return;
@@ -187,6 +200,16 @@ export default function TableManagement() {
 
                 {/* Actions */}
                 <div className="space-y-2">
+                  {/* Show unlock button prominently for occupied tables */}
+                  {table.status === 'occupied' && (
+                    <button
+                      onClick={() => unlockTable(table)}
+                      className="w-full bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-sm font-semibold"
+                    >
+                      🔓 Unlock Table & Clear Orders
+                    </button>
+                  )}
+
                   <div className="flex gap-2">
                     <button
                       onClick={() => setShowQR(table)}

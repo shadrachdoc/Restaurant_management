@@ -73,6 +73,46 @@ async def fetch_restaurant_slug(restaurant_id: UUID) -> Optional[str]:
         return None
 
 
+async def lock_table(restaurant_id: UUID, table_id: UUID) -> bool:
+    """Lock table by setting status to OCCUPIED"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.patch(
+                f"{RESTAURANT_SERVICE_URL}/api/v1/restaurants/{restaurant_id}/tables/{table_id}",
+                json={"status": "occupied"},
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                logger.info(f"Table {table_id} locked successfully")
+                return True
+            else:
+                logger.warning(f"Failed to lock table {table_id}: {response.status_code}")
+                return False
+    except Exception as e:
+        logger.error(f"Error locking table {table_id}: {e}")
+        return False
+
+
+async def unlock_table(restaurant_id: UUID, table_id: UUID) -> bool:
+    """Unlock table by setting status to AVAILABLE"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.patch(
+                f"{RESTAURANT_SERVICE_URL}/api/v1/restaurants/{restaurant_id}/tables/{table_id}",
+                json={"status": "available"},
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                logger.info(f"Table {table_id} unlocked successfully")
+                return True
+            else:
+                logger.warning(f"Failed to unlock table {table_id}: {response.status_code}")
+                return False
+    except Exception as e:
+        logger.error(f"Error unlocking table {table_id}: {e}")
+        return False
+
+
 @router.post("/orders", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_order(
     order_data: OrderCreate,
@@ -143,6 +183,11 @@ async def create_order(
 
     await db.commit()
     await db.refresh(new_order)
+
+    # Lock the table when order is created
+    if new_order.table_id:
+        await lock_table(new_order.restaurant_id, new_order.table_id)
+        logger.info(f"Table {new_order.table_id} locked for order {new_order.order_number}")
 
     # Load items relationship
     result = await db.execute(
@@ -248,6 +293,7 @@ async def update_order_status(
     """
     Update order status (CHEF/ADMIN only)
     Status flow: PENDING → CONFIRMED → PREPARING → READY → SERVED → COMPLETED
+    When order is marked as SERVED or COMPLETED, the table is automatically unlocked
     """
     result = await db.execute(
         select(Order)
@@ -270,6 +316,11 @@ async def update_order_status(
         order.confirmed_at = datetime.utcnow()
     elif status_update.status in [OrderStatus.COMPLETED, OrderStatus.CANCELLED]:
         order.completed_at = datetime.utcnow()
+
+    # When order is served or completed, unlock the table
+    if status_update.status in [OrderStatus.SERVED, OrderStatus.COMPLETED] and order.table_id:
+        await unlock_table(order.restaurant_id, order.table_id)
+        logger.info(f"Table {order.table_id} unlocked after order {order.order_number} marked as {status_update.status}")
 
     await db.commit()
     await db.refresh(order)
