@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: restaurant-dashboards
+  namespace: istio-system
+  labels:
+    grafana_dashboard: "1"
+data:
+  restaurant-metrics-dashboard.json: |-
+{{ .Files.Get "dashboards/restaurant-metrics-dashboard.json" | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: restaurant-logs-dashboard
+  namespace: istio-system
+  labels:
+    grafana_dashboard: "1"
+data:
+  restaurant-logs-dashboard.json: |-
+{{ .Files.Get "dashboards/restaurant-logs-dashboard.json" | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: restaurant-traces-dashboard
+  namespace: istio-system
+  labels:
+    grafana_dashboard: "1"
+data:
+  restaurant-traces-dashboard.json: |-
+{{ .Files.Get "dashboards/restaurant-traces-dashboard.json" | indent 4 }}
