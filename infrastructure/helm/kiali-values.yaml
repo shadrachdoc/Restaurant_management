@@ -1,0 +1,104 @@
+auth:
+  strategy: "anonymous"  # For dev/staging. Use "token" or "openid" for production
+
+deployment:
+  image_version: "v1.77"
+
+  # Monitor all namespaces
+  accessible_namespaces:
+    - "**"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # Additional environment variables
+  additional_labels:
+    version: stable
+
+# External services integration
+external_services:
+  custom_dashboards:
+    enabled: true
+
+  prometheus:
+    url: "http://prometheus-server.istio-system:80"
+    health_check_url: "http://prometheus-server.istio-system:80/-/healthy"
+
+  grafana:
+    enabled: true
+    in_cluster_url: "http://grafana.istio-system:80"
+    url: "http://grafana.istio-system:80"
+    auth:
+      type: basic
+      username: admin
+      password: changeme123
+
+  tracing:
+    enabled: true
+    in_cluster_url: "http://jaeger-query.istio-system:16686"
+    url: "http://jaeger-query.istio-system:16686"
+    use_grpc: false
+    namespace_selector: true
+
+  istio:
+    istio_identity_domain: "svc.cluster.local"
+    istio_sidecar_annotation: "sidecar.istio.io/status"
+    url_service_version: "http://istiod.istio-system:15014/version"
+    istio_canary_revision:
+      current: "default"
+      upgrade: ""
+
+# Server configuration
+server:
+  web_root: "/kiali"
+  web_port: 20001
+  web_schema: "http"
+
+  metrics_enabled: true
+  metrics_port: 9090
+
+# Service configuration
+service:
+  type: LoadBalancer
+  annotations: {}
+  port: 20001
+
+# Kiali features
+kiali_feature_flags:
+  istio_injection_action: true
+  istio_upgrade_action: false
+  ui_defaults:
+    graph:
+      find_options:
+        - description: "Find: slow edges (> 1s)"
+          expression: "rt > 1000"
+        - description: "Find: unhealthy nodes"
+          expression: "! healthy"
+        - description: "Find: high error rate (> 5%)"
+          expression: "error_rate > 5"
+      hide_options:
+        - description: "Hide: healthy nodes"
+          expression: "healthy"
+        - description: "Hide: unknown nodes"
+          expression: "name = unknown"
+      traffic:
+        grpc: requests
+        http: requests
+        tcp: sent
+
+# Login configuration
+login_token:
+  signing_key: "kiali-secret-token"
+  expiration_seconds: 86400  # 24 hours
+
+# Deployment strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 1

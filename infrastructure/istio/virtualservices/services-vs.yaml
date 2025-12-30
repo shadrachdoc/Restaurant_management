@@ -1,0 +1,109 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: order-service
+  namespace: restaurant-management
+spec:
+  hosts:
+    - order-service
+  http:
+    - route:
+        - destination:
+            host: order-service
+            port:
+              number: 8001
+            subset: stable
+          weight: 100
+      timeout: 15s
+      retries:
+        attempts: 3
+        perTryTimeout: 5s
+        retryOn: "5xx,reset,connect-failure,refused-stream"
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: restaurant-service
+  namespace: restaurant-management
+spec:
+  hosts:
+    - restaurant-service
+  http:
+    - route:
+        - destination:
+            host: restaurant-service
+            port:
+              number: 8002
+            subset: stable
+          weight: 100
+      timeout: 10s
+      retries:
+        attempts: 3
+        perTryTimeout: 3s
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: menu-service
+  namespace: restaurant-management
+spec:
+  hosts:
+    - menu-service
+  http:
+    - route:
+        - destination:
+            host: menu-service
+            port:
+              number: 8003
+            subset: stable
+          weight: 100
+      timeout: 10s
+      retries:
+        attempts: 3
+        perTryTimeout: 3s
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: auth-service
+  namespace: restaurant-management
+spec:
+  hosts:
+    - auth-service
+  http:
+    - route:
+        - destination:
+            host: auth-service
+            port:
+              number: 8004
+            subset: stable
+          weight: 100
+      timeout: 5s
+      retries:
+        attempts: 2
+        perTryTimeout: 2s
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: notification-service
+  namespace: restaurant-management
+spec:
+  hosts:
+    - notification-service
+  http:
+    - route:
+        - destination:
+            host: notification-service
+            port:
+              number: 8005
+            subset: stable
+          weight: 100
+      timeout: 20s  # Longer timeout for email/SMS sending
+      retries:
+        attempts: 2
+        perTryTimeout: 10s

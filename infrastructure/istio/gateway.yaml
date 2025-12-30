@@ -1,0 +1,32 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: restaurant-gateway
+  namespace: restaurant-management
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    # HTTP traffic
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "restaurant.corpv3.com"
+        - "*.restaurant.corpv3.com"
+      # Uncomment to redirect HTTP to HTTPS
+      # tls:
+      #   httpsRedirect: true
+
+    # HTTPS traffic (uncomment when SSL certificate is configured)
+    # - port:
+    #     number: 443
+    #     name: https
+    #     protocol: HTTPS
+    #   hosts:
+    #     - "restaurant.corpv3.com"
+    #     - "*.restaurant.corpv3.com"
+    #   tls:
+    #     mode: SIMPLE
+    #     credentialName: restaurant-tls-cert  # Secret name containing TLS cert
