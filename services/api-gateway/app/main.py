@@ -129,12 +129,20 @@ async def gateway(
     # Remove host header to avoid conflicts
     headers.pop("host", None)
 
-    # Add authorization header if credentials provided
-    if credentials:
-        headers["Authorization"] = f"Bearer {credentials.credentials}"
+    # Debug logging for authorization
+    print(f"DEBUG: Incoming Authorization header: {request.headers.get('authorization', 'NOT FOUND')}")
+    print(f"DEBUG: Credentials object: {credentials}")
+
+    # Authorization header is already in the headers dict from request.headers
+    # No need to add it again - it's already there!
+    print(f"DEBUG: Authorization header in forwarded request: {headers.get('authorization', 'NOT FOUND')}")
 
     # Get request body
     body = await request.body()
+
+    # Debug log headers being sent
+    if "/users" in path:
+        print(f"DEBUG: Headers being sent to backend: {headers}")
 
     # Forward request to target service
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -146,6 +154,10 @@ async def gateway(
                 content=body,
                 params=request.query_params
             )
+
+            # Debug log error responses
+            if response.status_code >= 400 and "/users" in path:
+                print(f"DEBUG: Error response {response.status_code}: {response.text}")
 
             # Return response from target service
             return Response(

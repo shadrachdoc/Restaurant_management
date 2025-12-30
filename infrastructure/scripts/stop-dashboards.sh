@@ -23,6 +23,7 @@ if [ ! -f "$PID_FILE" ]; then
     pkill -f "kubectl port-forward.*istio-system.*grafana.*3000" 2>/dev/null || true
     pkill -f "kubectl port-forward.*istio-system.*prometheus.*9090" 2>/dev/null || true
     pkill -f "kubectl port-forward.*istio-system.*jaeger.*16686" 2>/dev/null || true
+    pkill -f "kubectl port-forward.*argocd.*argocd-server.*8080" 2>/dev/null || true
 
     echo -e "${GREEN}✅ Cleanup complete${NC}"
     exit 0

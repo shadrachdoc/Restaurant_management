@@ -124,6 +124,28 @@ if kubectl get svc jaeger-query -n istio-system &> /dev/null; then
     echo ""
 fi
 
+# Start ArgoCD if available
+if kubectl get svc argocd-server -n argocd &> /dev/null; then
+    echo -e "${CYAN}5. Starting ArgoCD (GitOps)...${NC}"
+    kubectl port-forward -n argocd svc/argocd-server 8080:443 > /dev/null 2>&1 &
+    ARGOCD_PID=$!
+    echo "$ARGOCD_PID" >> "$PID_FILE"
+    sleep 2
+
+    if kill -0 "$ARGOCD_PID" 2>/dev/null; then
+        echo -e "${GREEN}   ✅ ArgoCD running on https://localhost:8080${NC}"
+        # Get ArgoCD initial password
+        ARGOCD_PASS=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" 2>/dev/null | base64 -d 2>/dev/null || echo "Not found")
+        if [ "$ARGOCD_PASS" != "Not found" ]; then
+            echo -e "${YELLOW}   📝 Username: admin${NC}"
+            echo -e "${YELLOW}   📝 Password: ${ARGOCD_PASS}${NC}"
+        fi
+    else
+        echo -e "${RED}   ❌ Failed to start ArgoCD${NC}"
+    fi
+    echo ""
+fi
+
 echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║              All Dashboards are Running!                  ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
@@ -137,6 +159,10 @@ echo -e "${CYAN}3. Prometheus (Metrics):${NC}      http://localhost:9090"
 if kubectl get svc jaeger-query -n istio-system &> /dev/null; then
     echo -e "${CYAN}4. Jaeger (Tracing):${NC}          http://localhost:16686"
 fi
+if kubectl get svc argocd-server -n argocd &> /dev/null; then
+    ARGOCD_PASS=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" 2>/dev/null | base64 -d 2>/dev/null || echo "admin")
+    echo -e "${CYAN}5. ArgoCD (GitOps):${NC}           https://localhost:8080  (admin / ${ARGOCD_PASS})"
+fi
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
@@ -148,8 +174,14 @@ echo ""
 
 echo -e "${YELLOW}🔍 What to check:${NC}"
 echo "   • Kiali:      Service topology and traffic flow"
-echo "   • Grafana:    Pre-loaded Istio dashboards"
+echo "   • Grafana:    Pre-loaded Istio dashboards + Custom Restaurant dashboards"
 echo "   • Prometheus: Raw metrics and PromQL queries"
+if kubectl get svc jaeger-query -n istio-system &> /dev/null; then
+    echo "   • Jaeger:     Distributed tracing"
+fi
+if kubectl get svc argocd-server -n argocd &> /dev/null; then
+    echo "   • ArgoCD:     GitOps deployments and application status"
+fi
 echo ""
 
 # Function to open URLs in browser (works on Linux, macOS, WSL)
@@ -178,6 +210,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     if kubectl get svc jaeger-query -n istio-system &> /dev/null; then
         sleep 1
         open_browser "http://localhost:16686"
+    fi
+    if kubectl get svc argocd-server -n argocd &> /dev/null; then
+        sleep 1
+        open_browser "https://localhost:8080"
     fi
     echo -e "${GREEN}✅ Dashboards opened${NC}"
     echo ""
