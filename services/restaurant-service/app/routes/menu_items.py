@@ -1,11 +1,15 @@
 """
 Menu item management routes
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List, Optional
 from uuid import UUID
+import os
+import shutil
+from pathlib import Path
+from datetime import datetime
 from ..database import get_db
 from ..models import MenuItem, Restaurant
 from ..schemas import (
@@ -19,6 +23,11 @@ from shared.utils.logger import setup_logger
 
 router = APIRouter()
 logger = setup_logger("menu-item-routes")
+
+# Image upload configuration
+UPLOAD_DIR = Path("/app/uploads/menu-items")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff", ".tif", ".avif", ".svg"}
 
 
 @router.post("/{restaurant_id}/menu-items", response_model=MenuItemResponse, status_code=status.HTTP_201_CREATED)
@@ -253,3 +262,71 @@ async def get_menu_items_by_category(
     items = result.scalars().all()
 
     return items
+
+
+
+@router.post("/{restaurant_id}/menu-items/upload-image")
+async def upload_menu_item_image(
+    restaurant_id: UUID,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Upload an image for a menu item
+    Returns the URL of the uploaded image
+    """
+    # Verify restaurant exists
+    result = await db.execute(
+        select(Restaurant).where(Restaurant.id == restaurant_id)
+    )
+    restaurant = result.scalar_one_or_none()
+
+    if not restaurant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Restaurant not found"
+        )
+
+    # Validate file extension
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        allowed_types = ", ".join(ALLOWED_EXTENSIONS)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid file type. Allowed types: {allowed_types}"
+        )
+
+    # Validate file size (max 5MB)
+    file.file.seek(0, 2)  # Seek to end
+    file_size = file.file.tell()
+    file.file.seek(0)  # Reset to beginning
+
+    if file_size > 5 * 1024 * 1024:  # 5MB
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File size must be less than 5MB"
+        )
+
+    # Generate unique filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{restaurant_id}_{timestamp}{file_ext}"
+    file_path = UPLOAD_DIR / filename
+
+    # Save file
+    try:
+        with file_path.open("wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        logger.error(f"Failed to save file: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save file"
+        )
+
+    # Return URL (you can customize this based on how you serve static files)
+    image_url = f"/uploads/menu-items/{filename}"
+
+    logger.info(f"Image uploaded: {filename} for restaurant {restaurant_id}")
+
+    return {"image_url": image_url, "filename": filename}
+

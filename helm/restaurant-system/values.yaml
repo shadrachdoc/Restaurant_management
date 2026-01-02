@@ -16,11 +16,11 @@ imagePullPolicy: IfNotPresent
 apiGateway:
   enabled: true
   name: api-gateway
-  replicaCount: 2
+  replicaCount: 1
   image:
-    repository: shadrach85/restaurant-api-gateway
-    tag: latest
-    pullPolicy: IfNotPresent
+    repository: shadrach85/api-gateway
+    tag: 739884b
+    pullPolicy: Always
   service:
     type: ClusterIP
     port: 8000
@@ -34,13 +34,14 @@ apiGateway:
   env:
     AUTH_SERVICE_URL: "http://auth-service:8001"
     RESTAURANT_SERVICE_URL: "http://restaurant-service:8003"
-    POS_SERVICE_URL: "http://pos-service:8004"
+    ORDER_SERVICE_URL: "http://order-service:8004"
+    CUSTOMER_SERVICE_URL: "http://customer-service:8005"
     RATE_LIMIT_REQUESTS: "100"
     RATE_LIMIT_WINDOW: "60"
   autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 10
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
 
@@ -48,11 +49,11 @@ apiGateway:
 authService:
   enabled: true
   name: auth-service
-  replicaCount: 2
+  replicaCount: 1
   image:
-    repository: shadrach85/restaurant-auth-service
-    tag: latest
-    pullPolicy: IfNotPresent
+    repository: shadrach85/auth-service
+    tag: 739884b
+    pullPolicy: Always
   service:
     type: ClusterIP
     port: 8001
@@ -64,9 +65,9 @@ authService:
       cpu: 200m
       memory: 256Mi
   autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 8
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
 
@@ -74,11 +75,11 @@ authService:
 restaurantService:
   enabled: true
   name: restaurant-service
-  replicaCount: 2
+  replicaCount: 1
   image:
-    repository: shadrach85/restaurant-restaurant-service
-    tag: latest
-    pullPolicy: IfNotPresent
+    repository: shadrach85/restaurant-service
+    tag: 030708d
+    pullPolicy: Always
   service:
     type: ClusterIP
     port: 8003
@@ -90,24 +91,53 @@ restaurantService:
       cpu: 200m
       memory: 256Mi
   autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 10
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
 
-# POS Service (Future)
-posService:
-  enabled: false
-  name: pos-service
-  replicaCount: 2
+# Order Service (with ML Analytics - adjusted for laptop testing)
+orderService:
+  enabled: true
+  name: order-service
+  replicaCount: 1
   image:
-    repository: shadrach85/restaurant-pos-service
-    tag: latest
-    pullPolicy: IfNotPresent
+    repository: shadrach85/order-service
+    tag: 739884b
+    pullPolicy: Always
   service:
     type: ClusterIP
     port: 8004
+  resources:
+    limits:
+      cpu: 1500m      # 1.5 CPU cores (laptop-friendly, scaled down from 2 cores)
+      memory: 2Gi     # 2GB RAM (laptop-friendly, scaled down from 4GB)
+    requests:
+      cpu: 500m       # 0.5 CPU baseline
+      memory: 1Gi     # 1GB baseline
+  env:
+    ENABLE_ML_PREDICTIONS: "true"
+    ML_MAX_CONCURRENT_TRAININGS: "1"  # Only 1 concurrent training on laptop
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# Customer Service
+customerService:
+  enabled: true
+  name: customer-service
+  replicaCount: 1
+  image:
+    repository: restaurant_management_customer-service
+    tag: 739884b
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8007
   resources:
     limits:
       cpu: 500m
@@ -116,9 +146,9 @@ posService:
       cpu: 200m
       memory: 256Mi
   autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 8
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
 
@@ -126,14 +156,14 @@ posService:
 frontend:
   enabled: true
   name: frontend
-  replicaCount: 2
+  replicaCount: 1
   image:
     repository: shadrach85/restaurant-frontend
-    tag: latest
-    pullPolicy: IfNotPresent
+    tag: 030708d
+    pullPolicy: Always
   service:
-    type: LoadBalancer
-    port: 3000
+    type: ClusterIP
+    port: 80
   resources:
     limits:
       cpu: 500m
@@ -142,48 +172,82 @@ frontend:
       cpu: 200m
       memory: 256Mi
   autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 6
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
 
-# PostgreSQL (using Bitnami chart)
+# PostgreSQL
 postgresql:
   enabled: true
+  name: postgres
+  image:
+    repository: postgres
+    tag: "15-alpine"
+  service:
+    type: ClusterIP
+    port: 5432
+  persistence:
+    enabled: true
+    size: 10Gi
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 256Mi
   auth:
     username: restaurant_admin
-    password: restaurant_password
+    password: restaurant_pass_2024
     database: restaurant_db
-  primary:
-    persistence:
-      enabled: true
-      size: 10Gi
-    resources:
-      limits:
-        cpu: 1000m
-        memory: 1Gi
-      requests:
-        cpu: 250m
-        memory: 256Mi
 
-# Redis (using Bitnami chart)
+# RabbitMQ
+rabbitmq:
+  enabled: true
+  name: rabbitmq
+  image:
+    repository: rabbitmq
+    tag: "3.13-management-alpine"
+  service:
+    type: ClusterIP
+    port: 5672
+    managementPort: 15672
+  persistence:
+    enabled: true
+    size: 5Gi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  auth:
+    username: guest
+    password: guest
+
+# Redis
 redis:
   enabled: true
-  architecture: standalone
-  auth:
-    enabled: false
-  master:
-    persistence:
-      enabled: true
-      size: 5Gi
-    resources:
-      limits:
-        cpu: 500m
-        memory: 512Mi
-      requests:
-        cpu: 100m
-        memory: 128Mi
+  name: redis
+  image:
+    repository: redis
+    tag: "7-alpine"
+  service:
+    type: ClusterIP
+    port: 6379
+  persistence:
+    enabled: true
+    size: 5Gi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
 
 # Ingress configuration
 ingress:

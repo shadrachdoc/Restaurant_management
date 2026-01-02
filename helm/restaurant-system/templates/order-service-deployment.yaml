@@ -1,0 +1,106 @@
+{{- if .Values.orderService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.orderService.name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.orderService.name }}
+spec:
+  replicas: {{ .Values.orderService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.orderService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.orderService.name }}
+    spec:
+      containers:
+      - name: order-service
+        image: "{{ .Values.orderService.image.repository }}:{{ .Values.orderService.image.tag }}"
+        imagePullPolicy: {{ .Values.orderService.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.orderService.service.port }}
+          name: http
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: POSTGRES_DB
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: DATABASE_URL
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: REDIS_HOST
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_USER
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: RABBITMQ_USER
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: RABBITMQ_PASSWORD
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: JWT_SECRET_KEY
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: SESSION_SECRET
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: ENVIRONMENT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: LOG_LEVEL
+        - name: RESTAURANT_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-config
+              key: RESTAURANT_SERVICE_URL
+        resources:
+          {{- toYaml .Values.orderService.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+{{- end }}

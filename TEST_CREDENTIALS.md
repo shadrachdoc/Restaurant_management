@@ -1,14 +1,16 @@
 # Restaurant Management System - Test Credentials
 
-## Created: 2025-12-20
+## Last Updated: December 29, 2025
 
 ### System Access Credentials
 
-All accounts have been created and tested successfully. Use these credentials to access different pages/roles in the application.
+All accounts have been created and tested successfully. Use these credentials to access different roles in the application.
+
+**Production URL**: https://restaurant.corpv3.com
 
 ---
 
-## 1. Admin Account (Primary)
+## 1. Master Admin Account
 **Page/Role:** System Administration / Master Admin Dashboard
 
 | Field | Value |
@@ -18,12 +20,14 @@ All accounts have been created and tested successfully. Use these credentials to
 | **Email** | admin@restaurant.com |
 | **Role** | master_admin |
 | **Phone** | +1234567890 |
-| **User ID** | fbd91e54-a091-4d36-9e3e-db62e05aa5ce |
+
+**Access URL**: https://restaurant.corpv3.com/master-admin
 
 **Permissions:**
 - Full system access
 - Manage all restaurants
-- Manage all users
+- Manage all users (User Management)
+- View and generate invoices for all restaurants
 - System configuration
 - Analytics and reporting
 
@@ -39,11 +43,13 @@ All accounts have been created and tested successfully. Use these credentials to
 | **Email** | chef@restaurant.com |
 | **Role** | chef |
 | **Phone** | +1234567891 |
-| **User ID** | ed5cec07-63df-4ae9-8397-e11af02d945b |
+| **Restaurant** | phalwan Briyani |
+
+**Access URL**: https://restaurant.corpv3.com/kitchen
 
 **Permissions:**
 - View incoming orders
-- Update order status
+- Update order status (Accept/Reject/Complete)
 - Manage kitchen operations
 - View menu items
 - Kitchen analytics
@@ -60,7 +66,9 @@ All accounts have been created and tested successfully. Use these credentials to
 | **Email** | restaurant@restaurant.com |
 | **Role** | restaurant_admin |
 | **Phone** | +1234567892 |
-| **User ID** | 4f9a03d6-a890-4462-a5ef-e3758963b0b6 |
+| **Restaurant** | phalwan Briyani |
+
+**Access URL**: https://restaurant.corpv3.com/admin
 
 **Permissions:**
 - Manage restaurant profile
@@ -73,41 +81,21 @@ All accounts have been created and tested successfully. Use these credentials to
 
 ---
 
-## Login Test Results
+## Test Restaurant Details
 
-All accounts tested successfully:
+**Restaurant Name**: phalwan Briyani
+**Restaurant ID**: `52c0d315-b894-40c6-be52-3416a9d0a1e7`
+**Country**: India
+**Currency**: INR (₹)
+**Billing Fees**:
+- Per Table Booking: ₹10.00
+- Per Online Booking: ₹15.00
+- Billing Enabled: ✅ YES
 
-```bash
-✅ Admin Login: master_admin - admin (PRIMARY)
-✅ Chef Login: chef - adminchef1
-✅ Restaurant Admin Login: restaurant_admin - adminres
-```
-
-**Note:** The `admin` account was recreated with the correct password. Old admin account from 2025-12-19 has been removed.
-
----
-
-## API Endpoints for Testing
-
-### Authentication
-```bash
-# Login
-curl -X POST http://localhost:8001/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"masteradmin","password":"password"}'
-
-# Login via API Gateway
-curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"masteradmin","password":"password"}'
-```
-
-### Using Access Token
-```bash
-# Get user profile
-curl -X GET http://localhost:8001/api/v1/users/me \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
-```
+**Test Data**:
+- 8 Menu Items (Chicken Biryani, Mutton Biryani, Veg Biryani, etc.)
+- 5 Tables (T1-T5)
+- 240 Completed Orders (16 days of test data)
 
 ---
 
@@ -124,26 +112,45 @@ The system supports the following roles:
 
 ## Notes
 
-- All accounts are active but not verified
-- Default password for all accounts: `password`
+- All accounts are active
+- Default password for all test accounts: `password`
 - For production, ensure passwords are changed and email verification is enabled
-- Access tokens expire in 30 minutes (configurable in settings)
-- Refresh tokens expire in 7 days (configurable in settings)
+- Access tokens expire in 30 minutes
+- Refresh tokens expire in 7 days
 
 ---
 
-## Frontend Access
+## Kubernetes Services
 
-**Local Development:**
-- Frontend: http://localhost:3000
-- API Gateway: http://localhost:8000
-- Auth Service: http://localhost:8001
-- Restaurant Service: http://localhost:8003
+**Namespace**: restaurant-system
 
-**API Documentation:**
-- Auth API Docs: http://localhost:8001/docs
-- Restaurant API Docs: http://localhost:8003/docs
-- API Gateway Docs: http://localhost:8000/docs
+| Service | Type | Port |
+|---------|------|------|
+| API Gateway | ClusterIP | 8000 |
+| Auth Service | ClusterIP | 8001 |
+| Restaurant Service | ClusterIP | 8003 |
+| Order Service | ClusterIP | 8004 |
+| Customer Service | ClusterIP | 8007 |
+| Frontend | ClusterIP | 80 |
+| PostgreSQL | ClusterIP | 5432 |
+| Redis | ClusterIP | 6379 |
+| RabbitMQ | ClusterIP | 5672, 15672 |
+
+---
+
+## API Documentation
+
+**Swagger/OpenAPI Docs** (via port-forward):
+```bash
+# Port-forward API Gateway
+kubectl port-forward -n restaurant-system svc/api-gateway 8000:8000
+
+# Then access:
+# - API Gateway Docs: http://localhost:8000/docs
+# - Auth API: http://localhost:8000/api/v1/auth/*
+# - Restaurant API: http://localhost:8000/api/v1/restaurants/*
+# - Order API: http://localhost:8000/api/v1/orders/*
+```
 
 ---
 
@@ -165,5 +172,6 @@ The system supports the following roles:
 ---
 
 **Document Status:** ✅ Verified and Working
-**Last Updated:** 2025-12-20
-**Environment:** Kubernetes Development Cluster
+**Last Updated:** December 29, 2025
+**Environment:** Kubernetes Production Cluster (Kind)
+**Domain:** https://restaurant.corpv3.com

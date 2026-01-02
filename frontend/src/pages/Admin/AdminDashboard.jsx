@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiUsers, FiDollarSign, FiStar, FiTrendingUp } from 'react-icons/fi';
 import DashboardLayout from '../../components/layout/DashboardLayout';
-import { restaurantAPI, feedbackAPI } from '../../services/api';
+import { restaurantAPI, feedbackAPI, tableAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 
@@ -10,6 +10,7 @@ export default function AdminDashboard() {
   const { user } = useAuthStore();
   const [analytics, setAnalytics] = useState(null);
   const [feedback, setFeedback] = useState(null);
+  const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,18 +23,28 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [analyticsRes, feedbackRes] = await Promise.all([
+      const [analyticsRes, feedbackRes, tablesRes] = await Promise.all([
         restaurantAPI.getAnalytics(user.restaurant_id),
         feedbackAPI.getSummary(user.restaurant_id, 30),
+        tableAPI.list(user.restaurant_id),
       ]);
       setAnalytics(analyticsRes.data);
       setFeedback(feedbackRes.data);
+      setTables(tablesRes.data);
     } catch (error) {
       toast.error('Failed to load dashboard data');
       console.error('Dashboard fetch error:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Table status counts
+  const tableStatusCounts = {
+    available: tables.filter(t => t.status === 'available').length,
+    occupied: tables.filter(t => t.status === 'occupied').length,
+    reserved: tables.filter(t => t.status === 'reserved').length,
+    cleaning: tables.filter(t => t.status === 'cleaning').length,
   };
 
   const stats = [
@@ -123,6 +134,39 @@ export default function AdminDashboard() {
               })}
             </div>
 
+            {/* Table Status Overview */}
+            {tables.length > 0 && (
+              <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold">Table Status Overview</h2>
+                  <Link
+                    to="/admin/tables"
+                    className="text-blue-600 hover:text-blue-700 text-sm font-semibold"
+                  >
+                    Manage Tables →
+                  </Link>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
+                    <div className="text-4xl font-bold text-green-700 mb-1">{tableStatusCounts.available}</div>
+                    <div className="text-sm font-medium text-green-600">🟢 Available</div>
+                  </div>
+                  <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-center">
+                    <div className="text-4xl font-bold text-red-700 mb-1">{tableStatusCounts.occupied}</div>
+                    <div className="text-sm font-medium text-red-600">🔴 Occupied</div>
+                  </div>
+                  <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4 text-center">
+                    <div className="text-4xl font-bold text-yellow-700 mb-1">{tableStatusCounts.reserved}</div>
+                    <div className="text-sm font-medium text-yellow-600">🟡 Reserved</div>
+                  </div>
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center">
+                    <div className="text-4xl font-bold text-blue-700 mb-1">{tableStatusCounts.cleaning}</div>
+                    <div className="text-sm font-medium text-blue-600">🔵 Cleaning</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Feedback Summary */}
             {feedback && (
               <div className="bg-white rounded-xl shadow-md p-6 mb-8">
@@ -177,6 +221,34 @@ export default function AdminDashboard() {
                 >
                   <p className="font-semibold text-gray-900">💬 View Feedback</p>
                   <p className="text-sm text-gray-600 mt-1">Read customer reviews</p>
+                </Link>
+              </div>
+            </div>
+
+            {/* Analytics & Reports */}
+            <div className="bg-white rounded-xl shadow-md p-6 mt-6">
+              <h2 className="text-xl font-bold mb-4">Analytics & Reports</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Link
+                  to="/admin/analytics"
+                  className="block p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all"
+                >
+                  <p className="font-semibold text-gray-900">📊 Analytics Dashboard</p>
+                  <p className="text-sm text-gray-600 mt-1">View sales trends and performance</p>
+                </Link>
+                <Link
+                  to="/admin/predictions"
+                  className="block p-4 border-2 border-gray-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-all"
+                >
+                  <p className="font-semibold text-gray-900">🔮 Demand Predictions</p>
+                  <p className="text-sm text-gray-600 mt-1">AI-powered demand forecasting</p>
+                </Link>
+                <Link
+                  to="/admin/customer-insights"
+                  className="block p-4 border-2 border-gray-200 rounded-lg hover:border-pink-500 hover:bg-pink-50 transition-all"
+                >
+                  <p className="font-semibold text-gray-900">👥 Customer Insights</p>
+                  <p className="text-sm text-gray-600 mt-1">Track preferences & recommendations</p>
                 </Link>
               </div>
             </div>

@@ -4,6 +4,7 @@ import { FiPlus, FiTrash2 } from 'react-icons/fi';
 import QRCode from 'react-qr-code';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { tableAPI } from '../../services/api';
+import axios from 'axios';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 
@@ -13,6 +14,10 @@ export default function TableManagement() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showQR, setShowQR] = useState(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pendingRegenerateTableId, setPendingRegenerateTableId] = useState(null);
+  const [password, setPassword] = useState('');
+  const [verifyingPassword, setVerifyingPassword] = useState(false);
   const [formData, setFormData] = useState({
     table_number: '',
     seat_count: 4,
@@ -63,14 +68,61 @@ export default function TableManagement() {
     }
   };
 
-  const regenerateQR = async (tableId) => {
+  const initiateRegenerateQR = (tableId) => {
+    setPendingRegenerateTableId(tableId);
+    setShowPasswordModal(true);
+    setPassword('');
+  };
+
+  const verifyPasswordAndRegenerateQR = async () => {
+    if (!password) {
+      toast.error('Please enter your password');
+      return;
+    }
+
+    setVerifyingPassword(true);
     try {
-      const response = await tableAPI.regenerateQR(user.restaurant_id, tableId);
-      toast.success('QR code regenerated!');
+      // Verify password first
+      const verifyResponse = await axios.post('/api/v1/auth/verify-password', {
+        password
+      });
+
+      if (!verifyResponse.data.valid) {
+        toast.error('Invalid password');
+        setVerifyingPassword(false);
+        return;
+      }
+
+      // Password is valid, proceed with QR regeneration
+      const response = await tableAPI.regenerateQR(user.restaurant_id, pendingRegenerateTableId);
+      toast.success('QR code regenerated successfully!');
       fetchTables();
       setShowQR(response.data);
+      setShowPasswordModal(false);
+      setPassword('');
+      setPendingRegenerateTableId(null);
     } catch (error) {
-      toast.error('Failed to regenerate QR');
+      console.error('Regenerate QR error:', error);
+      if (error.response?.status === 401) {
+        toast.error('Invalid password');
+      } else {
+        toast.error(error.response?.data?.detail || 'Failed to regenerate QR code');
+      }
+    } finally {
+      setVerifyingPassword(false);
+    }
+  };
+
+  const unlockTable = async (table) => {
+    if (!confirm(`Unlock Table ${table.table_number}? This will clear any pending orders and make the table available.`)) {
+      return;
+    }
+
+    try {
+      await updateStatus(table.id, 'available');
+      toast.success(`Table ${table.table_number} unlocked and ready for new orders!`);
+    } catch (error) {
+      toast.error('Failed to unlock table');
     }
   };
 
@@ -187,6 +239,16 @@ export default function TableManagement() {
 
                 {/* Actions */}
                 <div className="space-y-2">
+                  {/* Show unlock button prominently for occupied tables */}
+                  {table.status === 'occupied' && (
+                    <button
+                      onClick={() => unlockTable(table)}
+                      className="w-full bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-sm font-semibold"
+                    >
+                      🔓 Unlock Table & Clear Orders
+                    </button>
+                  )}
+
                   <div className="flex gap-2">
                     <button
                       onClick={() => setShowQR(table)}
@@ -195,7 +257,7 @@ export default function TableManagement() {
                       View QR
                     </button>
                     <button
-                      onClick={() => regenerateQR(table.id)}
+                      onClick={() => initiateRegenerateQR(table.id)}
                       className="flex-1 bg-blue-100 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-200 text-sm"
                     >
                       Regenerate
@@ -275,6 +337,67 @@ export default function TableManagement() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Password Confirmation Modal for QR Regeneration */}
+        {showPasswordModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-md w-full p-8">
+              <h2 className="text-2xl font-bold mb-2">Confirm QR Regeneration</h2>
+              <p className="text-gray-600 mb-6">Enter your password to regenerate the QR code. This will invalidate the old QR code.</p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Password</label>
+                  <input
+                    type="password"
+                    className="input-field"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && verifyPasswordAndRegenerateQR()}
+                    disabled={verifyingPassword}
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-2">
+                  <button
+                    onClick={verifyPasswordAndRegenerateQR}
+                    disabled={verifyingPassword}
+                    className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {verifyingPassword ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Verifying...
+                      </>
+                    ) : (
+                      'Confirm & Regenerate'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPasswordModal(false);
+                      setPassword('');
+                      setPendingRegenerateTableId(null);
+                    }}
+                    disabled={verifyingPassword}
+                    className="btn-secondary flex-1 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ <strong>Warning:</strong> The old QR code will no longer work after regeneration. Print and replace all physical QR codes for this table.
+                </p>
+              </div>
             </div>
           </div>
         )}

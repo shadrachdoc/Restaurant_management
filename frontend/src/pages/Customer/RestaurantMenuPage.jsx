@@ -14,8 +14,26 @@ const RestaurantMenuPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showCart, setShowCart] = useState(false);
+  const [tableInfo, setTableInfo] = useState(null);
 
   const { items, addItem, removeItem, updateQuantity, getItemCount, getGrandTotal, clearCart } = useCartStore();
+
+  // Load table info from URL parameters
+  useEffect(() => {
+    const tableId = searchParams.get('table');
+    const tableNumber = searchParams.get('tableNumber');
+
+    if (tableId && tableNumber) {
+      const tableData = {
+        tableId,
+        tableNumber,
+        restaurantId: restaurant?.id
+      };
+      setTableInfo(tableData);
+      // Store in sessionStorage for checkout page
+      sessionStorage.setItem('currentTable', JSON.stringify(tableData));
+    }
+  }, [searchParams, restaurant]);
 
   // Fetch restaurant and menu
   useEffect(() => {
@@ -31,13 +49,13 @@ const RestaurantMenuPage = () => {
 
         // Fetch restaurant by slug
         const restaurantRes = await axios.get(
-          `http://localhost:8003/api/v1/restaurants/slug/${restaurantSlug}`
+          `/api/v1/restaurants/slug/${restaurantSlug}`
         );
         setRestaurant(restaurantRes.data);
 
         // Fetch menu items
         const menuRes = await axios.get(
-          `http://localhost:8003/api/v1/restaurants/${restaurantRes.data.id}/menu-items`
+          `/api/v1/restaurants/${restaurantRes.data.id}/menu-items`
         );
 
         // Add restaurant info to each menu item for cart
@@ -107,6 +125,17 @@ const RestaurantMenuPage = () => {
         style={{ backgroundColor: restaurant?.theme_color || '#2563eb' }}
       >
         <div className="container mx-auto px-4 py-8">
+          {/* Table Info Banner (if from QR scan) */}
+          {tableInfo && (
+            <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg px-6 py-3 mb-6 flex items-center gap-3">
+              <span className="text-3xl">🍽️</span>
+              <div>
+                <p className="font-bold text-lg">Table {tableInfo.tableNumber}</p>
+                <p className="text-sm opacity-90">Your order will be delivered to this table</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {restaurant?.logo_url && (
@@ -170,31 +199,36 @@ const RestaurantMenuPage = () => {
               return (
                 <div
                   key={item.id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl hover:scale-105 transition-all duration-300"
                 >
                   {/* Item Image */}
-                  {item.image_url && (
-                    <img
-                      src={item.image_url}
-                      alt={item.name}
-                      className="w-full h-48 object-cover"
-                    />
-                  )}
+                  <div className="relative h-48 overflow-hidden bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                    {item.image_url ? (
+                      <img
+                        src={item.image_url}
+                        alt={item.name}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full bg-gradient-to-br from-orange-100 via-pink-100 to-purple-100">
+                        <span className="text-6xl">🍽️</span>
+                      </div>
+                    )}
+                    {/* Price Tag Overlay */}
+                    <div className="absolute top-2 right-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 py-1 rounded-full shadow-lg font-bold">
+                      ${parseFloat(item.price).toFixed(2)}
+                    </div>
+                  </div>
 
                   <div className="p-4">
                     {/* Item Info */}
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-800">
-                          {item.name}
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                          {item.description}
-                        </p>
-                      </div>
-                      <span className="text-lg font-bold text-blue-600 ml-2">
-                        ${parseFloat(item.price).toFixed(2)}
-                      </span>
+                    <div className="mb-2">
+                      <h3 className="text-xl font-bold text-gray-800 mb-1">
+                        {item.name}
+                      </h3>
+                      <p className="text-sm text-gray-600 line-clamp-2 min-h-[40px]">
+                        {item.description || 'Delicious menu item'}
+                      </p>
                     </div>
 
                     {/* Dietary Info */}
@@ -230,24 +264,24 @@ const RestaurantMenuPage = () => {
                     {quantity === 0 ? (
                       <button
                         onClick={() => handleAddToCart(item)}
-                        className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-bold hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
                       >
-                        Add to Cart
+                        🛒 Add to Cart
                       </button>
                     ) : (
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => updateQuantity(item.id, quantity - 1)}
-                          className="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300"
+                          className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 font-bold text-lg shadow-md"
                         >
                           −
                         </button>
-                        <span className="flex-1 text-center font-semibold">
+                        <span className="flex-1 text-center font-bold text-lg bg-gradient-to-r from-green-100 to-blue-100 py-2 rounded-lg">
                           {quantity} in cart
                         </span>
                         <button
                           onClick={() => updateQuantity(item.id, quantity + 1)}
-                          className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700"
+                          className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 font-bold text-lg shadow-md"
                         >
                           +
                         </button>

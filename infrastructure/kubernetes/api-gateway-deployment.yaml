@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: shadrach85/api-gateway:177670b
+        image: shadrach85/restaurant-api-gateway:uploads-routing
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
@@ -36,6 +36,8 @@ spec:
           value: "http://restaurant-service:8003"
         - name: ORDER_SERVICE_URL
           value: "http://order-service:8004"
+        - name: CUSTOMER_SERVICE_URL
+          value: "http://customer-service:8007"
         - name: KITCHEN_SERVICE_URL
           value: "http://kitchen-service:8005"
         - name: JWT_SECRET_KEY

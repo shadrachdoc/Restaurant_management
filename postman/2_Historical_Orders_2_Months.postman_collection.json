@@ -1,0 +1,213 @@
+{
+  "info": {
+    "name": "2. Historical Orders - 2 Months (200 Orders)",
+    "description": "Creates 200 orders spread over 2 months with Friday/Saturday peaks. Single run in Collection Runner.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost",
+      "type": "string"
+    },
+    {
+      "key": "restaurant_id",
+      "value": "73332393-3c58-47c1-b58e-6d2ab59e96bb",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup - Fetch Menu Items",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const response = pm.response.json();",
+              "if (response && response.length > 0) {",
+              "    pm.environment.set('menu_items', JSON.stringify(response));",
+              "    console.log(`✓ Loaded ${response.length} menu items`);",
+              "} else {",
+              "    console.error('No menu items found! Run Menu Setup collection first.');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "restaurants", "{{restaurant_id}}", "menu-items"]
+        }
+      }
+    },
+    {
+      "name": "Create Historical Order",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Configuration",
+              "const TOTAL_ORDERS = 200;",
+              "const DAYS_BACK = 60; // 2 months",
+              "const iteration = parseInt(pm.environment.get('iteration') || '0');",
+              "",
+              "// Customer name pools",
+              "const firstNames = ['John', 'Sarah', 'Mike', 'Emily', 'David', 'Lisa', 'James', 'Anna', 'Robert', 'Maria', 'Chris', 'Jessica', 'Daniel', 'Laura', 'Kevin', 'Amy', 'Brian', 'Michelle', 'Tom', 'Nicole'];",
+              "const lastNames = ['Smith', 'Johnson', 'Brown', 'Davis', 'Wilson', 'Martinez', 'Garcia', 'Lee', 'Taylor', 'Anderson', 'Moore', 'Jackson', 'White', 'Harris', 'Clark', 'Lewis', 'Walker', 'Hall', 'Allen', 'Young'];",
+              "",
+              "// Generate historical date (spread over 60 days)",
+              "const now = new Date();",
+              "const daysAgo = Math.floor((iteration / TOTAL_ORDERS) * DAYS_BACK);",
+              "const historicalDate = new Date(now);",
+              "historicalDate.setDate(historicalDate.getDate() - daysAgo);",
+              "",
+              "// Get day of week (0=Sunday, 5=Friday, 6=Saturday)",
+              "const dayOfWeek = historicalDate.getDay();",
+              "const isFriday = dayOfWeek === 5;",
+              "const isSaturday = dayOfWeek === 6;",
+              "const isWeekend = isFriday || isSaturday;",
+              "",
+              "// Weekend boost: More orders on Fri/Sat",
+              "// We'll create more orders for weekends by skipping some weekday iterations",
+              "const shouldCreateOrder = isWeekend || (Math.random() > 0.3); // 70% of weekdays, 100% of weekends",
+              "",
+              "if (!shouldCreateOrder) {",
+              "    // Skip this iteration for weekdays to create weekend concentration",
+              "    console.log(`Skipping ${historicalDate.toDateString()} to boost weekend orders`);",
+              "    pm.environment.set('skip_order', 'true');",
+              "    return;",
+              "}",
+              "",
+              "pm.environment.set('skip_order', 'false');",
+              "",
+              "// Determine order type (50% table, 50% online)",
+              "const isOnlineOrder = Math.random() > 0.5;",
+              "pm.environment.set('order_type', isOnlineOrder ? 'ONLINE' : 'TABLE');",
+              "",
+              "// Generate customer details",
+              "const customerName = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;",
+              "const customerPhone = `${Math.floor(Math.random() * 9000000000) + 1000000000}`;",
+              "const customerEmail = isOnlineOrder ? `${customerName.toLowerCase().replace(' ', '.')}@email.com` : null;",
+              "",
+              "pm.environment.set('customer_name', customerName);",
+              "pm.environment.set('customer_phone', customerPhone);",
+              "",
+              "// Set customer_email (null or string)",
+              "if (customerEmail) {",
+              "    pm.environment.set('customer_email', JSON.stringify(customerEmail));",
+              "} else {",
+              "    pm.environment.set('customer_email', 'null');",
+              "}",
+              "",
+              "// Table ID - always null for now",
+              "pm.environment.set('table_id', 'null');",
+              "",
+              "// Delivery address for online orders",
+              "if (isOnlineOrder) {",
+              "    const streets = ['Main St', 'Oak Ave', 'Elm St', 'Pine Rd', 'Maple Dr', 'Cedar Ln', 'Birch Way'];",
+              "    const cities = ['Springfield', 'Riverside', 'Oakland', 'Fairview', 'Georgetown'];",
+              "    const address = `${Math.floor(Math.random() * 999) + 1} ${streets[Math.floor(Math.random() * streets.length)]}, ${cities[Math.floor(Math.random() * cities.length)]}`;",
+              "    pm.environment.set('delivery_address', JSON.stringify(address));",
+              "} else {",
+              "    pm.environment.set('delivery_address', 'null');",
+              "}",
+              "",
+              "// Select menu items",
+              "const menuItemsStr = pm.environment.get('menu_items');",
+              "if (!menuItemsStr) {",
+              "    console.error('Menu items not loaded! Run Setup first.');",
+              "    return;",
+              "}",
+              "",
+              "const menuItems = JSON.parse(menuItemsStr);",
+              "",
+              "// Weekend orders tend to be larger",
+              "const maxItems = isWeekend ? 5 : 3;",
+              "const itemCount = Math.floor(Math.random() * maxItems) + 1;",
+              "const selectedItems = [];",
+              "",
+              "for (let i = 0; i < itemCount; i++) {",
+              "    const randomItem = menuItems[Math.floor(Math.random() * menuItems.length)];",
+              "    const quantity = Math.floor(Math.random() * (isWeekend ? 3 : 2)) + 1;",
+              "    ",
+              "    selectedItems.push({",
+              "        menu_item_id: randomItem.id,",
+              "        quantity: quantity,",
+              "        item_price: randomItem.price,",
+              "        special_instructions: Math.random() > 0.8 ? 'Extra spicy' : null",
+              "    });",
+              "}",
+              "",
+              "pm.environment.set('order_items', JSON.stringify(selectedItems));",
+              "pm.environment.set('historical_date', historicalDate.toISOString());",
+              "",
+              "// Log progress",
+              "const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek];",
+              "const orderTypeIcon = isOnlineOrder ? '🛒' : '🍽️';",
+              "console.log(`${iteration + 1}/${TOTAL_ORDERS}: ${dayName} ${historicalDate.toISOString().split('T')[0]} ${orderTypeIcon} ${isOnlineOrder ? 'Online' : 'Table'} - ${itemCount} items - ${customerName}`);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const skipOrder = pm.environment.get('skip_order');",
+              "",
+              "if (skipOrder === 'true') {",
+              "    // Skipped for weekend concentration",
+              "    const iteration = parseInt(pm.environment.get('iteration') || '0');",
+              "    pm.environment.set('iteration', (iteration + 1).toString());",
+              "    return;",
+              "}",
+              "",
+              "if (pm.response.code === 200 || pm.response.code === 201) {",
+              "    const response = pm.response.json();",
+              "    const orderId = response.id;",
+              "    const orderDate = pm.environment.get('historical_date');",
+              "    ",
+              "    // Store order ID for later manual date update",
+              "    const orderIds = pm.environment.get('created_order_ids') || '';",
+              "    pm.environment.set('created_order_ids', orderIds + orderId + '|' + orderDate + ',');",
+              "    ",
+              "    console.log(`✓ Order created: ${orderId}`);",
+              "    ",
+              "    const iteration = parseInt(pm.environment.get('iteration') || '0');",
+              "    pm.environment.set('iteration', (iteration + 1).toString());",
+              "} else {",
+              "    console.log('Error:', pm.response.text());",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"restaurant_id\": \"{{restaurant_id}}\",\n  \"customer_name\": \"{{customer_name}}\",\n  \"customer_phone\": \"{{customer_phone}}\",\n  \"customer_email\": {{customer_email}},\n  \"order_type\": \"{{order_type}}\",\n  \"table_id\": {{table_id}},\n  \"delivery_address\": {{delivery_address}},\n  \"items\": {{order_items}}\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/orders",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "orders"]
+        }
+      }
+    }
+  ]
+}

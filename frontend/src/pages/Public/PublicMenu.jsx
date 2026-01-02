@@ -103,21 +103,29 @@ export default function PublicMenu() {
       return;
     }
 
-    if (!customerInfo.name.trim()) {
-      toast.error('Please enter your name');
-      return;
-    }
-
     setOrderSubmitting(true);
 
     try {
+      // Generate guest name if not provided
+      let customerName = customerInfo.name.trim();
+      if (!customerName) {
+        const guestNumber = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+        customerName = `Guest-${guestNumber}`;
+      }
+
+      // Generate guest phone if not provided
+      let customerPhone = customerInfo.phone.trim();
+      if (!customerPhone) {
+        customerPhone = 'Not provided';
+      }
+
       const orderData = {
         restaurant_id: restaurantId,
         table_id: tableId,
-        customer_name: customerInfo.name,
-        customer_phone: customerInfo.phone || null,
+        customer_name: customerName,
+        customer_phone: customerPhone,
         special_instructions: customerInfo.specialInstructions || null,
-        order_type: 'DINE_IN',
+        order_type: 'table',
         items: cart.map(item => ({
           menu_item_id: item.id,
           quantity: item.quantity,
@@ -338,24 +346,23 @@ export default function PublicMenu() {
 
               {/* Customer Info */}
               <div className="space-y-4 mb-6">
-                <h3 className="font-semibold text-lg">Your Information</h3>
+                <h3 className="font-semibold text-lg">Your Information (Optional)</h3>
                 <input
                   type="text"
-                  placeholder="Name *"
+                  placeholder="Name (Optional - Auto-generated if empty)"
                   value={customerInfo.name}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
                   className="w-full p-3 border border-gray-300 rounded-lg"
-                  required
                 />
                 <input
                   type="tel"
-                  placeholder="Phone (optional)"
+                  placeholder="Phone (Optional)"
                   value={customerInfo.phone}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
                   className="w-full p-3 border border-gray-300 rounded-lg"
                 />
                 <textarea
-                  placeholder="Special instructions for your order (optional)"
+                  placeholder="Special instructions for your order (Optional)"
                   value={customerInfo.specialInstructions}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, specialInstructions: e.target.value })}
                   className="w-full p-3 border border-gray-300 rounded-lg"

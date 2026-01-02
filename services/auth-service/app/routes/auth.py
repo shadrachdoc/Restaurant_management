@@ -17,7 +17,9 @@ from ..schemas import (
     MessageResponse,
     PasswordResetRequest,
     PasswordResetConfirm,
-    PasswordChange
+    PasswordChange,
+    PasswordVerifyRequest,
+    PasswordVerifyResponse
 )
 from ..security import (
     hash_password,
@@ -286,3 +288,35 @@ async def change_password(
     logger.info(f"Password changed for user: {user.username}")
 
     return MessageResponse(message="Password changed successfully")
+
+
+@router.post("/verify-password", response_model=PasswordVerifyResponse)
+async def verify_user_password(
+    password_data: PasswordVerifyRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id)
+):
+    """
+    Verify user's current password
+    Used for sensitive operations like QR code regeneration
+    """
+    result = await db.execute(
+        select(User).where(User.id == current_user_id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # Verify password
+    is_valid = verify_password(password_data.password, user.hashed_password)
+
+    if is_valid:
+        logger.info(f"Password verification successful for user: {user.username}")
+        return PasswordVerifyResponse(valid=True, message="Password verified successfully")
+    else:
+        logger.warning(f"Password verification failed for user: {user.username}")
+        return PasswordVerifyResponse(valid=False, message="Invalid password")

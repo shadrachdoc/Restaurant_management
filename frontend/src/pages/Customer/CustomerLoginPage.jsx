@@ -89,7 +89,17 @@ const CustomerLoginPage = () => {
       navigate(`/customer/menu?restaurant=${registerData.restaurant_slug}`);
     } catch (error) {
       console.error('Registration failed:', error);
-      toast.error(error.response?.data?.detail || 'Registration failed');
+      let errorMessage = 'Registration failed';
+
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

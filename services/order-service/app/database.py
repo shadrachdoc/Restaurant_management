@@ -5,14 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.orm import declarative_base
 from shared.config.settings import settings
 
-# Create async engine
+# Create async engine with increased pool for analytics queries
 engine = create_async_engine(
     settings.database_url.replace("postgresql://", "postgresql+asyncpg://"),
     echo=True if settings.environment == "development" else False,
     future=True,
     pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=15,        # Increased from 10 (laptop-adjusted, production: 20)
+    max_overflow=25,     # Increased from 20 (laptop-adjusted, production: 30)
+    pool_timeout=30,     # Connection timeout
 )
 
 # Create async session factory

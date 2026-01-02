@@ -9,6 +9,8 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
 import secrets
+import httpx
+import os
 from ..database import get_db
 from ..models import Order, OrderItem
 from ..schemas import (
@@ -17,11 +19,14 @@ from ..schemas import (
     OrderUpdateStatus,
     MessageResponse
 )
-from shared.models.enums import OrderStatus
+from shared.models.enums import OrderStatus, OrderType
 from shared.utils.logger import setup_logger
 
 router = APIRouter()
 logger = setup_logger("order-routes")
+
+# Restaurant service URL
+RESTAURANT_SERVICE_URL = os.getenv("RESTAURANT_SERVICE_URL", "http://restaurant-service:8003")
 
 
 def generate_order_number() -> str:
@@ -29,6 +34,83 @@ def generate_order_number() -> str:
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
     random_suffix = secrets.token_hex(3).upper()
     return f"ORD-{timestamp}-{random_suffix}"
+
+
+async def fetch_menu_item(restaurant_id: UUID, menu_item_id: UUID) -> dict:
+    """Fetch menu item details from restaurant service"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{RESTAURANT_SERVICE_URL}/api/v1/restaurants/{restaurant_id}/menu-items/{menu_item_id}",
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.warning(f"Failed to fetch menu item {menu_item_id}: {response.status_code}")
+                return None
+    except Exception as e:
+        logger.error(f"Error fetching menu item {menu_item_id}: {e}")
+        return None
+
+
+async def fetch_restaurant_slug(restaurant_id: UUID) -> Optional[str]:
+    """Fetch restaurant slug from restaurant service"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{RESTAURANT_SERVICE_URL}/api/v1/restaurants/{restaurant_id}",
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("slug")
+            else:
+                logger.warning(f"Failed to fetch restaurant {restaurant_id}: {response.status_code}")
+                return None
+    except Exception as e:
+        logger.error(f"Error fetching restaurant {restaurant_id}: {e}")
+        return None
+
+
+async def lock_table(restaurant_id: UUID, table_id: UUID) -> bool:
+    """Lock table by setting status to OCCUPIED"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.patch(
+                f"{RESTAURANT_SERVICE_URL}/api/v1/restaurants/{restaurant_id}/tables/{table_id}/status",
+                params={"new_status": "occupied"},
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                logger.info(f"Table {table_id} locked successfully")
+                return True
+            else:
+                logger.warning(f"Failed to lock table {table_id}: {response.status_code} - {response.text}")
+                return False
+    except Exception as e:
+        logger.error(f"Error locking table {table_id}: {e}")
+        return False
+
+
+async def unlock_table(restaurant_id: UUID, table_id: UUID) -> bool:
+    """Unlock table by setting status to AVAILABLE"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.patch(
+                f"{RESTAURANT_SERVICE_URL}/api/v1/restaurants/{restaurant_id}/tables/{table_id}/status",
+                params={"new_status": "available"},
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                logger.info(f"Table {table_id} unlocked successfully")
+                return True
+            else:
+                logger.warning(f"Failed to unlock table {table_id}: {response.status_code} - {response.text}")
+                return False
+    except Exception as e:
+        logger.error(f"Error unlocking table {table_id}: {e}")
+        return False
 
 
 @router.post("/orders", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
@@ -45,12 +127,23 @@ async def create_order(
     order_items_data = []
 
     for item in order_data.items:
-        # For now, using placeholder values - should fetch from restaurant-service
-        item_price = 0.0  # TODO: Fetch from menu item
+        # Fetch menu item details from restaurant service
+        menu_item = await fetch_menu_item(order_data.restaurant_id, item.menu_item_id)
+
+        if not menu_item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Menu item {item.menu_item_id} not found"
+            )
+
+        item_name = menu_item.get("name", "Unknown Item")
+        item_price = float(menu_item.get("price", 0.0))
+        item_subtotal = item_price * item.quantity
+        subtotal += item_subtotal
 
         order_items_data.append({
             "menu_item_id": item.menu_item_id,
-            "item_name": "",  # TODO: Fetch from menu item
+            "item_name": item_name,
             "item_price": item_price,
             "quantity": item.quantity,
             "special_instructions": item.special_requests
@@ -66,8 +159,11 @@ async def create_order(
         table_id=order_data.table_id,
         order_number=generate_order_number(),
         status=OrderStatus.PENDING,
+        order_type=order_data.order_type if order_data.order_type else OrderType.TABLE,
         customer_name=order_data.customer_name,
         customer_phone=order_data.customer_phone,
+        customer_email=order_data.customer_email,
+        delivery_address=order_data.delivery_address,
         subtotal=subtotal,
         tax=tax,
         total=total,
@@ -87,6 +183,11 @@ async def create_order(
 
     await db.commit()
     await db.refresh(new_order)
+
+    # Lock the table when order is created
+    if new_order.table_id:
+        await lock_table(new_order.restaurant_id, new_order.table_id)
+        logger.info(f"Table {new_order.table_id} locked for order {new_order.order_number}")
 
     # Load items relationship
     result = await db.execute(
@@ -154,7 +255,33 @@ async def get_order(
             detail="Order not found"
         )
 
-    return order
+    # Fetch restaurant slug for frontend navigation
+    restaurant_slug = await fetch_restaurant_slug(order.restaurant_id)
+
+    # Convert to dict and add slug
+    order_dict = {
+        "id": order.id,
+        "restaurant_id": order.restaurant_id,
+        "restaurant_slug": restaurant_slug,
+        "table_id": order.table_id,
+        "order_number": order.order_number,
+        "status": order.status,
+        "customer_name": order.customer_name,
+        "customer_phone": order.customer_phone,
+        "customer_email": getattr(order, "customer_email", None),
+        "order_type": getattr(order, "order_type", None),
+        "delivery_address": getattr(order, "delivery_address", None),
+        "subtotal": order.subtotal,
+        "tax": order.tax,
+        "total": order.total,
+        "special_instructions": order.special_instructions,
+        "items": order.items,
+        "created_at": order.created_at,
+        "updated_at": order.updated_at,
+        "completed_at": order.completed_at
+    }
+
+    return order_dict
 
 
 @router.patch("/orders/{order_id}/status", response_model=OrderResponse)
@@ -166,6 +293,7 @@ async def update_order_status(
     """
     Update order status (CHEF/ADMIN only)
     Status flow: PENDING → CONFIRMED → PREPARING → READY → SERVED → COMPLETED
+    Table remains OCCUPIED until receipt is generated
     """
     result = await db.execute(
         select(Order)
@@ -184,15 +312,63 @@ async def update_order_status(
     order.status = status_update.status
 
     # Set timestamps based on status
-    if status_update.status == OrderStatus.CONFIRMED:
-        order.confirmed_at = datetime.utcnow()
-    elif status_update.status in [OrderStatus.COMPLETED, OrderStatus.CANCELLED]:
+    if status_update.status in [OrderStatus.COMPLETED, OrderStatus.CANCELLED]:
         order.completed_at = datetime.utcnow()
 
     await db.commit()
     await db.refresh(order)
 
     logger.info(f"Order {order.order_number} status updated to {status_update.status}")
+
+    return order
+
+
+@router.post("/orders/{order_id}/generate-receipt", response_model=OrderResponse)
+async def generate_receipt(
+    order_id: UUID,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Generate receipt for an order and unlock the table
+    This endpoint should be called by customer or admin after payment is completed
+    """
+    result = await db.execute(
+        select(Order)
+        .options(selectinload(Order.items))
+        .where(Order.id == order_id)
+    )
+    order = result.scalar_one_or_none()
+
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found"
+        )
+
+    # Only allow receipt generation for SERVED or COMPLETED orders
+    if order.status not in [OrderStatus.SERVED, OrderStatus.COMPLETED]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot generate receipt for order with status: {order.status}. Order must be SERVED or COMPLETED."
+        )
+
+    # Mark order as completed if it was just SERVED
+    if order.status == OrderStatus.SERVED:
+        order.status = OrderStatus.COMPLETED
+        order.completed_at = datetime.utcnow()
+
+    # Unlock the table when receipt is generated
+    if order.table_id:
+        table_unlocked = await unlock_table(order.restaurant_id, order.table_id)
+        if table_unlocked:
+            logger.info(f"Table {order.table_id} unlocked after receipt generated for order {order.order_number}")
+        else:
+            logger.warning(f"Failed to unlock table {order.table_id} for order {order.order_number}")
+
+    await db.commit()
+    await db.refresh(order)
+
+    logger.info(f"Receipt generated for order {order.order_number}")
 
     return order
 
@@ -204,6 +380,7 @@ async def cancel_order(
 ):
     """
     Cancel an order (mark as CANCELLED)
+    Also unlocks the table if it was locked
     """
     result = await db.execute(
         select(Order).where(Order.id == order_id)
@@ -224,6 +401,11 @@ async def cancel_order(
 
     order.status = OrderStatus.CANCELLED
     order.completed_at = datetime.utcnow()
+
+    # Unlock table when order is cancelled
+    if order.table_id:
+        await unlock_table(order.restaurant_id, order.table_id)
+        logger.info(f"Table {order.table_id} unlocked after order {order.order_number} was cancelled")
 
     await db.commit()
 

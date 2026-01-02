@@ -4,18 +4,24 @@ import { FiPlus, FiEdit, FiTrash2, FiToggleLeft, FiToggleRight } from 'react-ico
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { menuAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
+import useRestaurantStore from '../../store/restaurantStore';
 import toast from 'react-hot-toast';
 
 export default function MenuManagement() {
   const { user } = useAuthStore();
+  const { currencySymbol, fetchRestaurant } = useRestaurantStore();
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [imageUploadMethod, setImageUploadMethod] = useState('url'); // 'url' or 'upload'
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
     category: 'main_course',
+    image_url: '',
     is_vegetarian: false,
     is_vegan: false,
     is_gluten_free: false,
@@ -25,6 +31,7 @@ export default function MenuManagement() {
   useEffect(() => {
     if (user?.restaurant_id) {
       fetchMenuItems();
+      fetchRestaurant(user.restaurant_id);
     } else {
       setLoading(false);
     }
@@ -45,18 +52,32 @@ export default function MenuManagement() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      let finalFormData = { ...formData };
+
+      // Upload image file if one is selected
+      if (imageFile) {
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', imageFile);
+
+        const uploadResponse = await menuAPI.uploadImage(user.restaurant_id, uploadFormData);
+        finalFormData.image_url = uploadResponse.data.image_url;
+      }
+
       if (formData.id) {
-        await menuAPI.update(user.restaurant_id, formData.id, formData);
+        await menuAPI.update(user.restaurant_id, formData.id, finalFormData);
         toast.success('Menu item updated!');
       } else {
-        await menuAPI.create(user.restaurant_id, formData);
+        await menuAPI.create(user.restaurant_id, finalFormData);
         toast.success('Menu item added!');
       }
       setShowModal(false);
       fetchMenuItems();
       resetForm();
+      setImageFile(null);
+      setImagePreview('');
     } catch (error) {
       toast.error('Failed to save menu item');
+      console.error('Save error:', error);
     }
   };
 
@@ -88,6 +109,7 @@ export default function MenuManagement() {
       description: '',
       price: '',
       category: 'main_course',
+      image_url: '',
       is_vegetarian: false,
       is_vegan: false,
       is_gluten_free: false,
@@ -148,13 +170,29 @@ export default function MenuManagement() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">{category}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {categoryItems.map((item) => (
-                    <div key={item.id} className="bg-white rounded-xl shadow-md p-6">
-                      <div className="flex justify-between items-start mb-3">
-                        <h3 className="text-lg font-bold">{item.name}</h3>
-                        <span className="text-xl font-bold text-blue-600">${item.price.toFixed(2)}</span>
-                      </div>
+                    <div key={item.id} className="bg-white rounded-xl shadow-md overflow-hidden">
+                      {/* Item Image */}
+                      {item.image_url ? (
+                        <div className="w-full h-40 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                          <img
+                            src={item.image_url}
+                            alt={item.name}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-full h-40 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                          <span className="text-5xl">🍽️</span>
+                        </div>
+                      )}
 
-                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">{item.description}</p>
+                      <div className="p-6">
+                        <div className="flex justify-between items-start mb-3">
+                          <h3 className="text-lg font-bold">{item.name}</h3>
+                          <span className="text-xl font-bold text-blue-600">{currencySymbol}{item.price.toFixed(2)}</span>
+                        </div>
+
+                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">{item.description}</p>
 
                       <div className="flex flex-wrap gap-2 mb-4">
                         <span className={`badge ${item.is_available ? 'badge-success' : 'badge-error'}`}>
@@ -191,6 +229,7 @@ export default function MenuManagement() {
                           <FiTrash2 />
                         </button>
                       </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -226,6 +265,111 @@ export default function MenuManagement() {
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium mb-2">🖼️ Menu Item Image</label>
+
+                    {/* Tab Selection */}
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => setImageUploadMethod('url')}
+                        className={`px-4 py-2 rounded-lg font-medium ${
+                          imageUploadMethod === 'url'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        🔗 URL
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImageUploadMethod('upload')}
+                        className={`px-4 py-2 rounded-lg font-medium ${
+                          imageUploadMethod === 'upload'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        📤 Upload
+                      </button>
+                    </div>
+
+                    {/* URL Input */}
+                    {imageUploadMethod === 'url' && (
+                      <div>
+                        <input
+                          type="url"
+                          className="input-field"
+                          placeholder="https://example.com/image.jpg"
+                          value={formData.image_url || ''}
+                          onChange={(e) => {
+                            setFormData({ ...formData, image_url: e.target.value });
+                            setImagePreview(e.target.value);
+                            setImageFile(null);
+                          }}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Paste an image URL from the web</p>
+                      </div>
+                    )}
+
+                    {/* File Upload */}
+                    {imageUploadMethod === 'upload' && (
+                      <div>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                setImageFile(file);
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setImagePreview(reader.result);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                            className="hidden"
+                            id="image-upload"
+                          />
+                          <label
+                            htmlFor="image-upload"
+                            className="cursor-pointer inline-block"
+                          >
+                            <div className="text-4xl mb-2">📁</div>
+                            <p className="text-sm font-medium text-gray-700">
+                              Click to upload image
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              PNG, JPG, WEBP up to 5MB
+                            </p>
+                          </label>
+                        </div>
+                        {imageFile && (
+                          <p className="text-sm text-green-600 mt-2">
+                            ✓ Selected: {imageFile.name}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Image Preview */}
+                    {(imagePreview || formData.image_url) && (
+                      <div className="mt-3">
+                        <p className="text-xs font-medium text-gray-700 mb-2">Preview:</p>
+                        <img
+                          src={imagePreview || formData.image_url}
+                          alt="Preview"
+                          className="h-40 w-40 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div>

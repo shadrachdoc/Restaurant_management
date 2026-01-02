@@ -4,6 +4,25 @@ import { restaurantAPI, authAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 
+// Country to currency mapping
+const COUNTRY_CURRENCY_MAP = {
+  'United States': { code: 'USD', symbol: '$' },
+  'United Kingdom': { code: 'GBP', symbol: '£' },
+  'European Union': { code: 'EUR', symbol: '€' },
+  'Canada': { code: 'CAD', symbol: 'CA$' },
+  'Australia': { code: 'AUD', symbol: 'A$' },
+  'India': { code: 'INR', symbol: '₹' },
+  'Japan': { code: 'JPY', symbol: '¥' },
+  'China': { code: 'CNY', symbol: '¥' },
+  'Singapore': { code: 'SGD', symbol: 'S$' },
+  'United Arab Emirates': { code: 'AED', symbol: 'د.إ' },
+  'Saudi Arabia': { code: 'SAR', symbol: '﷼' },
+  'Mexico': { code: 'MXN', symbol: 'MX$' },
+  'Brazil': { code: 'BRL', symbol: 'R$' },
+  'Switzerland': { code: 'CHF', symbol: 'CHF' },
+  'South Africa': { code: 'ZAR', symbol: 'R' },
+};
+
 export default function RestaurantManagement() {
   const { user, updateUser } = useAuthStore();
   const [restaurant, setRestaurant] = useState(null);
@@ -19,6 +38,12 @@ export default function RestaurantManagement() {
     website: '',
     theme_color: '#000000',
     max_tables: 20,
+    country: 'United States',
+    currency_code: 'USD',
+    currency_symbol: '$',
+    per_table_booking_fee: 0,
+    per_online_booking_fee: 0,
+    enable_booking_fees: false,
   });
 
   useEffect(() => {
@@ -41,6 +66,16 @@ export default function RestaurantManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCountryChange = (country) => {
+    const currency = COUNTRY_CURRENCY_MAP[country] || { code: 'USD', symbol: '$' };
+    setFormData({
+      ...formData,
+      country,
+      currency_code: currency.code,
+      currency_symbol: currency.symbol,
+    });
   };
 
   const handleCreate = async (e) => {
@@ -178,6 +213,82 @@ export default function RestaurantManagement() {
                       min="1"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
+                    <select
+                      className="input-field"
+                      value={formData.country}
+                      onChange={(e) => handleCountryChange(e.target.value)}
+                    >
+                      {Object.keys(COUNTRY_CURRENCY_MAP).map(country => (
+                        <option key={country} value={country}>{country}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
+                    <input
+                      type="text"
+                      className="input-field bg-gray-100"
+                      value={`${formData.currency_code} (${formData.currency_symbol})`}
+                      disabled
+                    />
+                  </div>
+                </div>
+
+                {/* Billing Configuration Section */}
+                <div className="pt-6 border-t">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Billing Configuration</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="enable_booking_fees"
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        checked={formData.enable_booking_fees}
+                        onChange={(e) => setFormData({ ...formData, enable_booking_fees: e.target.checked })}
+                      />
+                      <label htmlFor="enable_booking_fees" className="ml-2 text-sm font-medium text-gray-700">
+                        Enable Booking Fees
+                      </label>
+                    </div>
+
+                    {formData.enable_booking_fees && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Per Table Booking Fee ({formData.currency_symbol})
+                          </label>
+                          <input
+                            type="number"
+                            className="input-field"
+                            value={formData.per_table_booking_fee}
+                            onChange={(e) => setFormData({ ...formData, per_table_booking_fee: parseFloat(e.target.value) || 0 })}
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Per Online Booking Fee ({formData.currency_symbol})
+                          </label>
+                          <input
+                            type="number"
+                            className="input-field"
+                            value={formData.per_online_booking_fee}
+                            onChange={(e) => setFormData({ ...formData, per_online_booking_fee: parseFloat(e.target.value) || 0 })}
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex gap-4 pt-6 border-t">
@@ -297,6 +408,84 @@ export default function RestaurantManagement() {
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
+                <select
+                  className="input-field"
+                  value={formData.country || 'United States'}
+                  onChange={(e) => handleCountryChange(e.target.value)}
+                  disabled={!editing}
+                >
+                  {Object.keys(COUNTRY_CURRENCY_MAP).map(country => (
+                    <option key={country} value={country}>{country}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
+                <input
+                  type="text"
+                  className="input-field bg-gray-100"
+                  value={`${formData.currency_code || 'USD'} (${formData.currency_symbol || '$'})`}
+                  disabled
+                />
+              </div>
+            </div>
+
+            {/* Billing Configuration Section */}
+            <div className="pt-6 border-t">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Billing Configuration</h3>
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="enable_booking_fees_edit"
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                    checked={formData.enable_booking_fees || false}
+                    onChange={(e) => setFormData({ ...formData, enable_booking_fees: e.target.checked })}
+                    disabled={!editing}
+                  />
+                  <label htmlFor="enable_booking_fees_edit" className="ml-2 text-sm font-medium text-gray-700">
+                    Enable Booking Fees
+                  </label>
+                </div>
+
+                {formData.enable_booking_fees && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Per Table Booking Fee ({formData.currency_symbol || '$'})
+                      </label>
+                      <input
+                        type="number"
+                        className="input-field"
+                        value={formData.per_table_booking_fee || 0}
+                        onChange={(e) => setFormData({ ...formData, per_table_booking_fee: parseFloat(e.target.value) || 0 })}
+                        min="0"
+                        step="0.01"
+                        disabled={!editing}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Per Online Booking Fee ({formData.currency_symbol || '$'})
+                      </label>
+                      <input
+                        type="number"
+                        className="input-field"
+                        value={formData.per_online_booking_fee || 0}
+                        onChange={(e) => setFormData({ ...formData, per_online_booking_fee: parseFloat(e.target.value) || 0 })}
+                        min="0"
+                        step="0.01"
+                        disabled={!editing}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

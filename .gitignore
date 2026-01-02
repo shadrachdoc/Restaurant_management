@@ -32,6 +32,22 @@ htmlcov/
 *.cover
 .hypothesis/
 
+# Playwright Testing - Test files and artifacts
+tests/
+test-results/
+playwright-report/
+playwright/.cache/
+*.spec.ts
+*.spec.js
+run-tests-report.sh
+playwright-report.json
+playwright.config.ts
+playwright.config.js
+
+# Playwright dependencies (root level only - not frontend/backend)
+/package.json
+/package-lock.json
+
 # IDEs
 .vscode/
 .idea/

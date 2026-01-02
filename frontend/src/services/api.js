@@ -96,6 +96,14 @@ export const authAPI = {
   updateRestaurantId: (restaurantId) => authApi.patch(`/api/v1/users/me/restaurant?restaurant_id=${restaurantId}`),
 };
 
+// User Management API - uses Auth Service (Master Admin)
+export const userAPI = {
+  listUsers: () => authApi.get('/api/v1/users'),
+  getUser: (userId) => authApi.get(`/api/v1/users/${userId}`),
+  updateUser: (userId, data) => authApi.put(`/api/v1/users/${userId}`, data),
+  deleteUser: (userId) => authApi.delete(`/api/v1/users/${userId}`),
+};
+
 // Staff API - uses Auth Service
 export const staffAPI = {
   listStaff: (restaurantId, role) => authApi.get(`/api/v1/users/staff/${restaurantId}`, { params: { role } }),
@@ -116,8 +124,14 @@ export const restaurantAPI = {
   update: (id, data) => restaurantApi.put(`/api/v1/restaurants/${id}`, data),
   delete: (id) => restaurantApi.delete(`/api/v1/restaurants/${id}`),
   getAnalytics: (id) => restaurantApi.get(`/api/v1/restaurants/${id}/analytics`),
+  getBilling: (id) => restaurantApi.get(`/api/v1/restaurants/${id}/billing`),
   updateBranding: (id, data) => restaurantApi.patch(`/api/v1/restaurants/${id}/branding`, data),
   toggleStatus: (id) => restaurantApi.patch(`/api/v1/restaurants/${id}/toggle-status`),
+
+  // Invoice endpoints
+  generateInvoice: (id, data) => restaurantApi.post(`/api/v1/restaurants/${id}/invoices`, data || {}),
+  listInvoices: (id, params) => restaurantApi.get(`/api/v1/restaurants/${id}/invoices`, { params }),
+  getInvoice: (restaurantId, invoiceId) => restaurantApi.get(`/api/v1/restaurants/${restaurantId}/invoices/${invoiceId}`),
 };
 
 // Menu API - uses Restaurant Service
@@ -128,6 +142,14 @@ export const menuAPI = {
   update: (restaurantId, itemId, data) => restaurantApi.put(`/api/v1/restaurants/${restaurantId}/menu-items/${itemId}`, data),
   delete: (restaurantId, itemId) => restaurantApi.delete(`/api/v1/restaurants/${restaurantId}/menu-items/${itemId}`),
   toggleAvailability: (restaurantId, itemId) => restaurantApi.patch(`/api/v1/restaurants/${restaurantId}/menu-items/${itemId}/toggle-availability`),
+  uploadImage: (restaurantId, formData) => {
+    return axios.post(`/api/v1/restaurants/${restaurantId}/menu-items/upload-image`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      }
+    });
+  },
 };
 
 // Table API - uses Restaurant Service
@@ -160,4 +182,5 @@ export const orderAPI = {
   create: (data) => restaurantApi.post('/api/v1/orders', data),
   updateStatus: (orderId, status) => restaurantApi.patch(`/api/v1/orders/${orderId}/status`, { status }),
   cancel: (orderId) => restaurantApi.delete(`/api/v1/orders/${orderId}`),
+  generateReceipt: (orderId) => restaurantApi.post(`/api/v1/orders/${orderId}/generate-receipt`),
 };

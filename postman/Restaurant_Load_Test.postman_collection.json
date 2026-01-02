@@ -1,0 +1,321 @@
+{
+  "info": {
+    "name": "Restaurant Load Test - 250 Orders",
+    "description": "Generate 100 table orders (walk-in) + 150 online orders with user registration",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost",
+      "type": "string"
+    },
+    {
+      "key": "restaurant_id",
+      "value": "73332393-3c58-47c1-b58e-6d2ab59e96bb",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "iteration",
+      "value": "0",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup - Get Menu Items",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const response = pm.response.json();",
+              "if (response && response.length > 0) {",
+              "    // Store menu item IDs for use in orders",
+              "    const menuItems = response.map(item => ({",
+              "        id: item.id,",
+              "        name: item.name,",
+              "        price: item.price",
+              "    }));",
+              "    pm.environment.set('menu_items', JSON.stringify(menuItems));",
+              "    console.log('Menu items stored:', menuItems.length);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/menu-items",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "restaurants", "{{restaurant_id}}", "menu-items"]
+        }
+      }
+    },
+    {
+      "name": "1. Register Online Customer",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Generate unique customer data",
+              "const timestamp = Date.now();",
+              "const random = Math.floor(Math.random() * 10000);",
+              "const iteration = pm.environment.get('iteration') || 0;",
+              "",
+              "pm.environment.set('customer_email', `customer${timestamp}${random}@test.com`);",
+              "pm.environment.set('customer_password', 'Test@1234');",
+              "pm.environment.set('customer_name', `Customer ${iteration}`);",
+              "pm.environment.set('customer_phone', `${Math.floor(Math.random() * 9000000000) + 1000000000}`);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200 || pm.response.code === 201) {",
+              "    console.log('User registered:', pm.environment.get('customer_email'));",
+              "} else {",
+              "    console.log('Registration failed:', pm.response.text());",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{customer_email}}\",\n  \"password\": \"{{customer_password}}\",\n  \"role\": \"CUSTOMER\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/register",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "2. Login Online Customer",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const response = pm.response.json();",
+              "if (response && response.access_token) {",
+              "    pm.environment.set('access_token', response.access_token);",
+              "    console.log('Logged in successfully');",
+              "} else {",
+              "    console.log('Login failed:', pm.response.text());",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{customer_email}}\",\n  \"password\": \"{{customer_password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "3. Create Online Order",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Get menu items",
+              "const menuItemsStr = pm.environment.get('menu_items');",
+              "const menuItems = menuItemsStr ? JSON.parse(menuItemsStr) : [];",
+              "",
+              "if (menuItems.length === 0) {",
+              "    console.error('No menu items found. Run Setup first.');",
+              "    return;",
+              "}",
+              "",
+              "// Select random items (1-5 items per order)",
+              "const itemCount = Math.floor(Math.random() * 4) + 1; // 1-5 items",
+              "const selectedItems = [];",
+              "",
+              "for (let i = 0; i < itemCount; i++) {",
+              "    const randomItem = menuItems[Math.floor(Math.random() * menuItems.length)];",
+              "    const quantity = Math.floor(Math.random() * 3) + 1; // 1-3 quantity",
+              "    ",
+              "    selectedItems.push({",
+              "        menu_item_id: randomItem.id,",
+              "        quantity: quantity,",
+              "        item_price: randomItem.price,",
+              "        special_instructions: Math.random() > 0.7 ? 'Extra spicy' : null",
+              "    });",
+              "}",
+              "",
+              "pm.environment.set('order_items', JSON.stringify(selectedItems));",
+              "",
+              "// Generate delivery address",
+              "const streets = ['Main St', 'Oak Ave', 'Elm St', 'Pine Rd', 'Maple Dr'];",
+              "const cities = ['Springfield', 'Riverside', 'Oakland', 'Fairview'];",
+              "const address = `${Math.floor(Math.random() * 999) + 1} ${streets[Math.floor(Math.random() * streets.length)]}, ${cities[Math.floor(Math.random() * cities.length)]}, State ${Math.floor(Math.random() * 50) + 1}`;",
+              "pm.environment.set('delivery_address', address);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200 || pm.response.code === 201) {",
+              "    const response = pm.response.json();",
+              "    console.log('Online order created:', response.id);",
+              "} else {",
+              "    console.log('Order creation failed:', pm.response.text());",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"restaurant_id\": \"{{restaurant_id}}\",\n  \"customer_name\": \"{{customer_name}}\",\n  \"customer_phone\": \"{{customer_phone}}\",\n  \"customer_email\": \"{{customer_email}}\",\n  \"order_type\": \"ONLINE\",\n  \"delivery_address\": \"{{delivery_address}}\",\n  \"items\": {{order_items}},\n  \"special_instructions\": \"Please ring the doorbell\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/orders",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "orders"]
+        }
+      }
+    },
+    {
+      "name": "4. Create Table Order (Walk-in)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Generate unique guest customer data",
+              "const timestamp = Date.now();",
+              "const random = Math.floor(Math.random() * 10000);",
+              "const iteration = pm.environment.get('iteration') || 0;",
+              "",
+              "const firstNames = ['John', 'Sarah', 'Mike', 'Emily', 'David', 'Lisa', 'James', 'Anna', 'Robert', 'Maria'];",
+              "const lastNames = ['Smith', 'Johnson', 'Brown', 'Davis', 'Wilson', 'Martinez', 'Garcia', 'Lee', 'Taylor', 'Anderson'];",
+              "",
+              "pm.environment.set('guest_name', `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`);",
+              "pm.environment.set('guest_phone', `${Math.floor(Math.random() * 9000000000) + 1000000000}`);",
+              "",
+              "// Get menu items",
+              "const menuItemsStr = pm.environment.get('menu_items');",
+              "const menuItems = menuItemsStr ? JSON.parse(menuItemsStr) : [];",
+              "",
+              "if (menuItems.length === 0) {",
+              "    console.error('No menu items found. Run Setup first.');",
+              "    return;",
+              "}",
+              "",
+              "// Select random items (1-4 items per table order)",
+              "const itemCount = Math.floor(Math.random() * 3) + 1; // 1-4 items",
+              "const selectedItems = [];",
+              "",
+              "for (let i = 0; i < itemCount; i++) {",
+              "    const randomItem = menuItems[Math.floor(Math.random() * menuItems.length)];",
+              "    const quantity = Math.floor(Math.random() * 2) + 1; // 1-2 quantity",
+              "    ",
+              "    selectedItems.push({",
+              "        menu_item_id: randomItem.id,",
+              "        quantity: quantity,",
+              "        item_price: randomItem.price,",
+              "        special_instructions: Math.random() > 0.8 ? 'No onions' : null",
+              "    });",
+              "}",
+              "",
+              "pm.environment.set('table_order_items', JSON.stringify(selectedItems));",
+              "",
+              "// Random table number",
+              "pm.environment.set('table_number', `Table-${Math.floor(Math.random() * 50) + 1}`);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200 || pm.response.code === 201) {",
+              "    const response = pm.response.json();",
+              "    console.log('Table order created:', response.id, 'for', pm.environment.get('guest_name'));",
+              "} else {",
+              "    console.log('Table order failed:', pm.response.text());",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"restaurant_id\": \"{{restaurant_id}}\",\n  \"customer_name\": \"{{guest_name}}\",\n  \"customer_phone\": \"{{guest_phone}}\",\n  \"order_type\": \"TABLE\",\n  \"table_id\": \"{{table_number}}\",\n  \"items\": {{table_order_items}}\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/orders",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "orders"]
+        }
+      }
+    }
+  ]
+}

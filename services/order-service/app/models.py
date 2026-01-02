@@ -2,12 +2,12 @@
 Database models for Order Service
 """
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, Text, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, Text, ForeignKey, Enum as SQLEnum, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 import uuid
 from sqlalchemy.ext.declarative import declarative_base
-from shared.models.enums import OrderStatus
+from shared.models.enums import OrderStatus, OrderType
 
 Base = declarative_base()
 
@@ -24,10 +24,16 @@ class Order(Base):
     # Order details
     order_number = Column(String(50), unique=True, nullable=False, index=True)
     status = Column(SQLEnum(OrderStatus), default=OrderStatus.PENDING, nullable=False, index=True)
+    order_type = Column(SQLEnum(OrderType), nullable=False, server_default='TABLE', index=True)
 
     # Customer info
+    customer_id = Column(UUID(as_uuid=True), nullable=True, index=True)  # Soft reference (no FK)
     customer_name = Column(String(255), nullable=True)
-    customer_phone = Column(String(20), nullable=True)
+    customer_email = Column(String(255), nullable=True, index=True)  # For guest tracking
+    customer_phone = Column(String(20), nullable=True, index=True)  # Added index for analytics
+
+    # Delivery info (for online orders)
+    delivery_address = Column(Text, nullable=True)
 
     # Pricing
     subtotal = Column(Float, nullable=False, default=0.0)
@@ -134,3 +140,40 @@ class AssistanceRequest(Base):
 
     def __repr__(self):
         return f"<AssistanceRequest(id={self.id}, table_id={self.table_id}, type={self.request_type})>"
+
+
+class CustomerItemPreference(Base):
+    """
+    Customer item preference model for tracking RFM metrics
+    Tracks customer preferences for personalized recommendations
+    """
+
+    __tablename__ = "customer_item_preferences"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    customer_identifier = Column(String(255), nullable=False, index=True)  # email or customer_id
+    restaurant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    menu_item_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+
+    # RFM Metrics (Recency, Frequency, Monetary)
+    order_count = Column(Integer, default=0, nullable=False)
+    total_quantity = Column(Integer, default=0, nullable=False)
+    total_spent = Column(Float, default=0.0, nullable=False)
+    recency_score = Column(Float, default=0.0, nullable=False)  # Days since last order
+    frequency_score = Column(Float, default=0.0, nullable=False)  # Orders per month
+    monetary_score = Column(Float, default=0.0, nullable=False)  # Total spent
+
+    # Timestamps
+    first_ordered_at = Column(DateTime, nullable=True)
+    last_ordered_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Composite index for faster queries
+    __table_args__ = (
+        Index('idx_customer_restaurant', 'customer_identifier', 'restaurant_id'),
+        Index('idx_customer_menu_item', 'customer_identifier', 'menu_item_id'),
+    )
+
+    def __repr__(self):
+        return f"<CustomerItemPreference(customer={self.customer_identifier}, item={self.menu_item_id}, orders={self.order_count})>"

@@ -1,4 +1,4 @@
-name: Build and Push Docker Images
+name: Build and Deploy with Helm
 
 on:
   push:
@@ -10,6 +10,7 @@ on:
 
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  HELM_CHART_PATH: helm/restaurant-system
 
 jobs:
   build-and-push:
@@ -48,6 +49,8 @@ jobs:
           file: frontend/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:latest,${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:${{ env.SHORT_SHA }}
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/restaurant-frontend:latest
+          cache-to: type=inline
 
       - name: Build and Push API Gateway
         uses: docker/build-push-action@v5
@@ -56,6 +59,8 @@ jobs:
           file: services/api-gateway/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:latest,${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:${{ env.SHORT_SHA }}
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/api-gateway:latest
+          cache-to: type=inline
 
       - name: Build and Push Auth Service
         uses: docker/build-push-action@v5
@@ -64,6 +69,8 @@ jobs:
           file: services/auth-service/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:latest,${{ secrets.DOCKERHUB_USERNAME }}/auth-service:${{ env.SHORT_SHA }}
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/auth-service:latest
+          cache-to: type=inline
 
       - name: Build and Push Restaurant Service
         uses: docker/build-push-action@v5
@@ -72,6 +79,8 @@ jobs:
           file: services/restaurant-service/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:latest,${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:${{ env.SHORT_SHA }}
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/restaurant-service:latest
+          cache-to: type=inline
 
       - name: Build and Push Order Service
         uses: docker/build-push-action@v5
@@ -80,6 +89,8 @@ jobs:
           file: services/order-service/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/order-service:latest,${{ secrets.DOCKERHUB_USERNAME }}/order-service:${{ env.SHORT_SHA }}
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/order-service:latest
+          cache-to: type=inline
 
       - name: Build Summary
         run: |
@@ -97,8 +108,8 @@ jobs:
           echo "  - latest"
           echo "  - ${{ env.SHORT_SHA }}"
 
-  verify-and-update-manifests:
-    name: Verify Images and Update Manifests
+  update-helm-values:
+    name: Update Helm Values and Commit
     needs: build-and-push
     runs-on: ubuntu-latest
     permissions:
@@ -144,49 +155,44 @@ jobs:
 
           echo "✅ All images verified on DockerHub"
 
-      - name: Update Kubernetes Deployments
+      - name: Update Helm Values
         run: |
-          echo "Updating Kubernetes deployment files with new image tags..."
+          echo "Updating Helm values.yaml with new image tags..."
           SHORT_SHA="${{ needs.build-and-push.outputs.short_sha }}"
-          echo "Using image tag: $SHORT_SHA"
+          DOCKERHUB_USER="${{ secrets.DOCKERHUB_USERNAME }}"
 
-          # Update frontend deployment
-          sed -i "s|image: shadrach85/restaurant-frontend:.*|image: shadrach85/restaurant-frontend:$SHORT_SHA|g" infrastructure/kubernetes/frontend-deployment.yaml
-          sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/frontend-deployment.yaml
+          # Update values.yaml with new image tags
+          sed -i "s|repository: restaurant_management_frontend|repository: ${DOCKERHUB_USER}/restaurant-frontend|g" ${{ env.HELM_CHART_PATH }}/values.yaml
+          sed -i "s|repository: restaurant_management_api-gateway|repository: ${DOCKERHUB_USER}/api-gateway|g" ${{ env.HELM_CHART_PATH }}/values.yaml
+          sed -i "s|repository: restaurant_management_auth-service|repository: ${DOCKERHUB_USER}/auth-service|g" ${{ env.HELM_CHART_PATH }}/values.yaml
+          sed -i "s|repository: restaurant_management_restaurant-service|repository: ${DOCKERHUB_USER}/restaurant-service|g" ${{ env.HELM_CHART_PATH }}/values.yaml
+          sed -i "s|repository: restaurant_management_order-service|repository: ${DOCKERHUB_USER}/order-service|g" ${{ env.HELM_CHART_PATH }}/values.yaml
 
-          # Update api-gateway deployment
-          sed -i "s|image: shadrach85/api-gateway:.*|image: shadrach85/api-gateway:$SHORT_SHA|g" infrastructure/kubernetes/api-gateway-deployment.yaml
-          sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/api-gateway-deployment.yaml
+          # Update all image tags to the new commit SHA
+          sed -i "s|tag: latest|tag: ${SHORT_SHA}|g" ${{ env.HELM_CHART_PATH }}/values.yaml
+          sed -i "s|tag: analytics-v1|tag: ${SHORT_SHA}|g" ${{ env.HELM_CHART_PATH }}/values.yaml
 
-          # Update auth-service deployment
-          sed -i "s|image: shadrach85/auth-service:.*|image: shadrach85/auth-service:$SHORT_SHA|g" infrastructure/kubernetes/auth-service-deployment.yaml
-          sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/auth-service-deployment.yaml
+          # Ensure imagePullPolicy is Always for production
+          sed -i "s|pullPolicy: IfNotPresent|pullPolicy: Always|g" ${{ env.HELM_CHART_PATH }}/values.yaml
+          sed -i "s|pullPolicy: Never|pullPolicy: Always|g" ${{ env.HELM_CHART_PATH }}/values.yaml
 
-          # Update restaurant-service deployment
-          sed -i "s|image: shadrach85/restaurant-service:.*|image: shadrach85/restaurant-service:$SHORT_SHA|g" infrastructure/kubernetes/restaurant-service-deployment.yaml
-          sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/restaurant-service-deployment.yaml
+          echo "✅ Helm values updated to use commit SHA: $SHORT_SHA"
 
-          # Update order-service deployment
-          sed -i "s|image: shadrach85/order-service:.*|image: shadrach85/order-service:$SHORT_SHA|g" infrastructure/kubernetes/order-service-deployment.yaml
-          sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" infrastructure/kubernetes/order-service-deployment.yaml
-
-          echo "✅ Deployment files updated to use commit SHA: $SHORT_SHA"
-
-      - name: Commit and Push Deployment Updates
+      - name: Commit and Push Helm Values
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
 
-          git add infrastructure/kubernetes/*.yaml
+          git add ${{ env.HELM_CHART_PATH }}/values.yaml
 
           # Only commit if there are changes
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
             SHORT_SHA="${{ needs.build-and-push.outputs.short_sha }}"
-            git commit -m "Update deployments to image tag $SHORT_SHA [skip ci]"
+            git commit -m "Update Helm values to image tag $SHORT_SHA [skip ci]"
             git push origin HEAD:${GITHUB_REF#refs/heads/}
-            echo "✅ Deployment manifests updated and pushed"
+            echo "✅ Helm values updated and pushed"
           fi
 
       - name: Final Summary
@@ -197,10 +203,15 @@ jobs:
           SHORT_SHA="${{ needs.build-and-push.outputs.short_sha }}"
           echo "Image Tag: $SHORT_SHA"
           echo ""
-          echo "🚀 Deployment files updated and committed"
-          echo "🔄 ArgoCD will now detect changes and pull from DockerHub"
+          echo "🚀 Helm values.yaml updated and committed"
+          echo "🔄 ArgoCD will now detect changes and upgrade the release"
           echo ""
           echo "Next steps:"
           echo "  1. ArgoCD syncs repository changes"
-          echo "  2. ArgoCD pulls images from DockerHub"
-          echo "  3. Pods restart with new images"
+          echo "  2. ArgoCD runs: helm upgrade restaurant-system"
+          echo "  3. Kubernetes pulls new images from DockerHub"
+          echo "  4. Pods restart with new images"
+          echo ""
+          echo "📊 Monitor deployment:"
+          echo "  kubectl get pods -n restaurant-system -w"
+          echo "  helm status restaurant-system -n restaurant-system"

@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from shared.config.settings import settings
 from shared.utils.logger import setup_logger
 from .database import init_db, close_db
-from .routes import orders, sessions, assistance
+from .routes import orders, sessions, assistance, analytics
 
 # Setup logger
 logger = setup_logger("order-service", settings.log_level, settings.log_format)
@@ -64,6 +64,12 @@ app.include_router(
     assistance.router,
     prefix="/api/v1",
     tags=["Assistance Requests"]
+)
+
+app.include_router(
+    analytics.router,
+    prefix="/api/v1",
+    tags=["Analytics & Predictions"]
 )
 
 

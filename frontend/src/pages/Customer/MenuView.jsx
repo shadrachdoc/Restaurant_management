@@ -138,7 +138,7 @@ export default function MenuView() {
                   <div key={item.id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="text-lg font-bold text-gray-900">{item.name}</h3>
-                      <span className="text-xl font-bold text-blue-600">${item.price.toFixed(2)}</span>
+                      <span className="text-xl font-bold text-blue-600">{restaurant?.currency_symbol || '$'}{item.price.toFixed(2)}</span>
                     </div>
 
                     <p className="text-gray-600 text-sm mb-4 line-clamp-2">{item.description}</p>
@@ -176,7 +176,7 @@ export default function MenuView() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-lg font-bold">Cart ({cart.length} items)</p>
-                <p className="text-2xl font-bold text-blue-600">${cartTotal.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-blue-600">{restaurant?.currency_symbol || '$'}{cartTotal.toFixed(2)}</p>
               </div>
               <button className="btn-primary px-8 py-3 text-lg">
                 Checkout
@@ -189,7 +189,7 @@ export default function MenuView() {
                 <div key={item.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
                   <div className="flex-1">
                     <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-gray-600">${item.price.toFixed(2)} each</p>
+                    <p className="text-sm text-gray-600">{restaurant?.currency_symbol || '$'}{item.price.toFixed(2)} each</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <button

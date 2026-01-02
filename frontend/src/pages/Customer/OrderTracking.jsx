@@ -14,45 +14,58 @@ export default function OrderTracking() {
   const [showAddItems, setShowAddItems] = useState(false);
   const [newItems, setNewItems] = useState([]);
   const [updatingOrder, setUpdatingOrder] = useState(false);
+  const [generatingReceipt, setGeneratingReceipt] = useState(false);
 
   const statuses = [
-    { key: 'PENDING', label: 'Order Received', icon: FiCheck },
-    { key: 'CONFIRMED', label: 'Confirmed', icon: FiCheck },
-    { key: 'PREPARING', label: 'Preparing', icon: FiClock },
-    { key: 'READY', label: 'Ready to Serve', icon: FiPackage },
-    { key: 'SERVED', label: 'Served', icon: FiCheckCircle },
-    { key: 'COMPLETED', label: 'Completed', icon: FiCheckCircle },
+    { key: 'pending', label: 'Order Received', icon: FiCheck },
+    { key: 'confirmed', label: 'Confirmed', icon: FiCheck },
+    { key: 'preparing', label: 'Preparing', icon: FiClock },
+    { key: 'ready', label: 'Ready to Serve', icon: FiPackage },
+    { key: 'served', label: 'Served', icon: FiCheckCircle },
+    { key: 'completed', label: 'Completed', icon: FiCheckCircle },
   ];
 
   // Fetch order details
   useEffect(() => {
+    let isMounted = true;
+
     const fetchOrder = async () => {
       try {
         const response = await orderAPI.get(orderId);
-        setOrder(response.data);
+        if (isMounted) {
+          setOrder(response.data);
 
-        // Fetch restaurant and menu items
-        if (response.data.restaurant_id) {
-          const restaurantResponse = await restaurantAPI.get(response.data.restaurant_id);
-          setRestaurant(restaurantResponse.data);
+          // Fetch restaurant and menu items only on initial load
+          if (response.data.restaurant_id && !restaurant) {
+            const restaurantResponse = await restaurantAPI.get(response.data.restaurant_id);
+            setRestaurant(restaurantResponse.data);
 
-          const menuResponse = await menuAPI.list(response.data.restaurant_id);
-          setMenuItems(menuResponse.data.filter(item => item.is_available));
+            const menuResponse = await menuAPI.list(response.data.restaurant_id);
+            setMenuItems(menuResponse.data.filter(item => item.is_available));
+          }
+          setLoading(false);
         }
       } catch (error) {
         console.error('Failed to fetch order:', error);
-        toast.error('Failed to load order details');
-      } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+          // Only show error toast on initial load
+          if (!order) {
+            toast.error('Failed to load order details');
+          }
+        }
       }
     };
 
     if (orderId) {
       fetchOrder();
 
-      // Poll for updates every 5 seconds
-      const interval = setInterval(fetchOrder, 5000);
-      return () => clearInterval(interval);
+      // Poll for updates every 10 seconds to avoid rate limiting
+      const interval = setInterval(fetchOrder, 10000);
+      return () => {
+        isMounted = false;
+        clearInterval(interval);
+      };
     }
   }, [orderId]);
 
@@ -102,7 +115,7 @@ export default function OrderTracking() {
           quantity: item.quantity,
           price: item.price,
         })),
-        order_type: 'DINE_IN',
+        order_type: 'table',
         customer_name: order.customer_name || 'Guest',
         customer_phone: order.customer_phone || '',
       };
@@ -125,6 +138,26 @@ export default function OrderTracking() {
 
   // Calculate new items total
   const newItemsTotal = newItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  // Handle generate receipt
+  const handleGenerateReceipt = async () => {
+    if (!confirm('Generate receipt and free up the table? This action cannot be undone.')) {
+      return;
+    }
+
+    setGeneratingReceipt(true);
+    try {
+      const response = await orderAPI.generateReceipt(orderId);
+      setOrder(response.data);
+      toast.success('Receipt generated! Table is now available.');
+    } catch (error) {
+      console.error('Failed to generate receipt:', error);
+      const errorMsg = error.response?.data?.detail || 'Failed to generate receipt';
+      toast.error(errorMsg);
+    } finally {
+      setGeneratingReceipt(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -200,7 +233,7 @@ export default function OrderTracking() {
           </div>
 
           {/* Estimated Time */}
-          {order.status !== 'COMPLETED' && order.status !== 'SERVED' && (
+          {order.status !== 'completed' && order.status !== 'served' && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <p className="text-sm text-blue-800 text-center">
                 ⏱️ Estimated time: <strong>15-20 minutes</strong>
@@ -224,7 +257,7 @@ export default function OrderTracking() {
                         </p>
                       )}
                     </div>
-                    <p className="font-semibold">${(parseFloat(item.price) * item.quantity).toFixed(2)}</p>
+                    <p className="font-semibold">{restaurant?.currency_symbol || '$'}{(parseFloat(item.price) * item.quantity).toFixed(2)}</p>
                   </div>
                 ))
               ) : (
@@ -235,19 +268,19 @@ export default function OrderTracking() {
               {order.subtotal && (
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Subtotal</span>
-                  <span>${parseFloat(order.subtotal).toFixed(2)}</span>
+                  <span>{restaurant?.currency_symbol || '$'}{parseFloat(order.subtotal).toFixed(2)}</span>
                 </div>
               )}
               {order.tax && (
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Tax</span>
-                  <span>${parseFloat(order.tax).toFixed(2)}</span>
+                  <span>{restaurant?.currency_symbol || '$'}{parseFloat(order.tax).toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between items-center border-t pt-2">
                 <p className="text-lg font-bold">Total</p>
                 <p className="text-2xl font-bold text-blue-600">
-                  ${parseFloat(order.total).toFixed(2)}
+                  {restaurant?.currency_symbol || '$'}{parseFloat(order.total).toFixed(2)}
                 </p>
               </div>
             </div>
@@ -255,7 +288,7 @@ export default function OrderTracking() {
         </div>
 
         {/* Add More Items Section */}
-        {order.status !== 'COMPLETED' && order.status !== 'SERVED' && (
+        {order.status !== 'completed' && order.status !== 'served' && (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-lg">Add More Items</h3>
@@ -286,7 +319,7 @@ export default function OrderTracking() {
                               <p className="text-xs text-gray-600 mt-1">{item.description}</p>
                             )}
                             <p className="text-sm font-semibold text-blue-600 mt-1">
-                              ${parseFloat(item.price).toFixed(2)}
+                              {restaurant?.currency_symbol || '$'}{parseFloat(item.price).toFixed(2)}
                             </p>
                           </div>
                           <button
@@ -316,7 +349,7 @@ export default function OrderTracking() {
                     <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
                       <div>
                         <p className="font-medium text-sm">{item.name}</p>
-                        <p className="text-xs text-gray-600">${parseFloat(item.price).toFixed(2)} each</p>
+                        <p className="text-xs text-gray-600">{restaurant?.currency_symbol || '$'}{parseFloat(item.price).toFixed(2)} each</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2 bg-white border rounded-lg">
@@ -361,6 +394,45 @@ export default function OrderTracking() {
             )}
           </div>
         )}
+
+        {/* Action Buttons */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
+          <h3 className="font-bold text-lg mb-4">Quick Actions</h3>
+          <div className="flex flex-col gap-4">
+            {/* Generate Receipt Button - Only show for SERVED orders */}
+            {order.status === 'served' && (
+              <button
+                onClick={handleGenerateReceipt}
+                disabled={generatingReceipt}
+                className="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md flex items-center justify-center gap-2"
+              >
+                {generatingReceipt ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Generating Receipt...
+                  </>
+                ) : (
+                  <>
+                    ✅ Generate Receipt & Free Table
+                  </>
+                )}
+              </button>
+            )}
+
+            <button
+              onClick={() => navigate(`/menu?restaurant=${restaurant?.slug}`)}
+              className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md"
+            >
+              🍽️ Order Again
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="w-full bg-gray-600 text-white py-4 rounded-lg font-semibold hover:bg-gray-700 transition-colors shadow-md"
+            >
+              🖨️ Print Receipt
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

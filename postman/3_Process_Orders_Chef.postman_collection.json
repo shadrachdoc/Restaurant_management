@@ -1,0 +1,200 @@
+{
+  "info": {
+    "name": "3. Process Orders - Chef Workflow",
+    "description": "Chef accepts and completes all orders + 10 cancellations. Updates revenue dashboard.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost",
+      "type": "string"
+    },
+    {
+      "key": "restaurant_id",
+      "value": "73332393-3c58-47c1-b58e-6d2ab59e96bb",
+      "type": "string"
+    },
+    {
+      "key": "chef_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup - Login as Chef",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const response = pm.response.json();",
+              "if (response && response.access_token) {",
+              "    pm.environment.set('chef_token', response.access_token);",
+              "    console.log('✓ Chef logged in successfully');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"adminchef\",\n  \"password\": \"password\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "Get Pending Orders",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const response = pm.response.json();",
+              "if (response && response.length > 0) {",
+              "    // Store all order IDs",
+              "    const orderIds = response.map(order => order.id);",
+              "    pm.environment.set('pending_order_ids', JSON.stringify(orderIds));",
+              "    pm.environment.set('total_orders', orderIds.length);",
+              "    pm.environment.set('processed_count', '0');",
+              "    pm.environment.set('cancelled_count', '0');",
+              "    ",
+              "    console.log(`✓ Found ${orderIds.length} pending orders to process`);",
+              "} else {",
+              "    console.log('No pending orders found');",
+              "    pm.environment.set('pending_order_ids', '[]');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/orders?limit=300",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "restaurants", "{{restaurant_id}}", "orders"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "300"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Process Order (Accept/Complete/Cancel)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const orderIdsStr = pm.environment.get('pending_order_ids');",
+              "const orderIds = JSON.parse(orderIdsStr || '[]');",
+              "const processedCount = parseInt(pm.environment.get('processed_count') || '0');",
+              "const cancelledCount = parseInt(pm.environment.get('cancelled_count') || '0');",
+              "const totalOrders = parseInt(pm.environment.get('total_orders') || '0');",
+              "",
+              "if (processedCount >= orderIds.length) {",
+              "    console.log('All orders processed!');",
+              "    pm.environment.set('skip_request', 'true');",
+              "    return;",
+              "}",
+              "",
+              "pm.environment.set('skip_request', 'false');",
+              "",
+              "const currentOrderId = orderIds[processedCount];",
+              "pm.environment.set('current_order_id', currentOrderId);",
+              "",
+              "// Decide if this order should be cancelled",
+              "// Cancel exactly 10 orders (spread throughout)",
+              "const shouldCancel = cancelledCount < 10 && (processedCount % Math.floor(totalOrders / 10)) === 0;",
+              "",
+              "if (shouldCancel) {",
+              "    pm.environment.set('order_action', 'cancel');",
+              "    pm.environment.set('order_status', 'cancelled');",
+              "    console.log(`${processedCount + 1}/${totalOrders}: ❌ Cancelling order ${currentOrderId}`);",
+              "} else {",
+              "    // Workflow: PENDING → CONFIRMED → PREPARING → READY → SERVED",
+              "    // We'll do this in one request by setting final status",
+              "    pm.environment.set('order_action', 'complete');",
+              "    pm.environment.set('order_status', 'served');",
+              "    console.log(`${processedCount + 1}/${totalOrders}: ✓ Completing order ${currentOrderId}`);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const skipRequest = pm.environment.get('skip_request');",
+              "if (skipRequest === 'true') {",
+              "    return;",
+              "}",
+              "",
+              "const action = pm.environment.get('order_action');",
+              "const processedCount = parseInt(pm.environment.get('processed_count') || '0');",
+              "const cancelledCount = parseInt(pm.environment.get('cancelled_count') || '0');",
+              "",
+              "if (pm.response.code === 200 || pm.response.code === 201) {",
+              "    if (action === 'cancel') {",
+              "        pm.environment.set('cancelled_count', (cancelledCount + 1).toString());",
+              "        console.log(`  ✓ Order cancelled (${cancelledCount + 1}/10 cancellations)`);",
+              "    } else {",
+              "        console.log(`  ✓ Order completed successfully`);",
+              "    }",
+              "    ",
+              "    pm.environment.set('processed_count', (processedCount + 1).toString());",
+              "} else {",
+              "    console.log('Error processing order:', pm.response.text());",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{chef_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"{{order_status}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/orders/{{current_order_id}}/status",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "orders", "{{current_order_id}}", "status"]
+        }
+      }
+    }
+  ]
+}

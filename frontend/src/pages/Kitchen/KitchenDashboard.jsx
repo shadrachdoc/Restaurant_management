@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { FiClock, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
+import { FiClock, FiCheck, FiX, FiRefreshCw, FiLogOut } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
 import { orderAPI } from '../../services/api';
 
 export default function KitchenDashboard() {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -66,6 +68,12 @@ export default function KitchenDashboard() {
       console.error('Failed to cancel order:', error);
       toast.error(error.response?.data?.detail || 'Failed to cancel order');
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast.success('Logged out successfully');
+    navigate('/login');
   };
 
   const statusColors = {
@@ -135,15 +143,29 @@ export default function KitchenDashboard() {
           <div>
             <h1 className="text-4xl font-bold text-gray-900">Kitchen Display</h1>
             <p className="text-gray-600 mt-1">Manage incoming orders</p>
+            {user && (
+              <p className="text-sm text-gray-500 mt-1">
+                Logged in as: <span className="font-semibold">{user.email}</span>
+              </p>
+            )}
           </div>
-          <button
-            onClick={() => fetchOrders(true)}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 font-semibold"
-          >
-            <FiRefreshCw className={refreshing ? 'animate-spin' : ''} />
-            Refresh
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => fetchOrders(true)}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 font-semibold"
+            >
+              <FiRefreshCw className={refreshing ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold"
+            >
+              <FiLogOut />
+              Logout
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-6 mt-4">
