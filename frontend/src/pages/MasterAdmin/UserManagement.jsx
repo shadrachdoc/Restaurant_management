@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FiUsers, FiEdit2, FiTrash2, FiX, FiPlus, FiLogOut } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
-import axios from '../../services/api';
-import { restaurantAPI } from '../../services/api';
+import { userAPI, restaurantAPI, authAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 
@@ -31,7 +30,7 @@ export default function UserManagement() {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('/api/v1/auth/users');
+      const response = await userAPI.listUsers();
       setUsers(response.data);
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -89,7 +88,7 @@ export default function UserManagement() {
     }
 
     try {
-      await axios.delete(`/api/v1/auth/users/${userId}`);
+      await userAPI.deleteUser(userId);
       toast.success('User deleted successfully!');
       fetchUsers();
     } catch (error) {
@@ -111,7 +110,7 @@ export default function UserManagement() {
         if (updateData.restaurant_id === '') {
           updateData.restaurant_id = null;
         }
-        await axios.put(`/api/v1/auth/users/${editingUser.id}`, updateData);
+        await userAPI.updateUser(editingUser.id, updateData);
         toast.success('User updated successfully!');
       } else {
         // Create user
@@ -120,7 +119,7 @@ export default function UserManagement() {
         if (createData.restaurant_id === '') {
           createData.restaurant_id = null;
         }
-        await axios.post('/api/v1/auth/signup', createData);
+        await authAPI.signup(createData);
         toast.success('User created successfully!');
       }
       setShowModal(false);

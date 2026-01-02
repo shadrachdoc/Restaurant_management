@@ -96,6 +96,14 @@ export const authAPI = {
   updateRestaurantId: (restaurantId) => authApi.patch(`/api/v1/users/me/restaurant?restaurant_id=${restaurantId}`),
 };
 
+// User Management API - uses Auth Service (Master Admin)
+export const userAPI = {
+  listUsers: () => authApi.get('/api/v1/users'),
+  getUser: (userId) => authApi.get(`/api/v1/users/${userId}`),
+  updateUser: (userId, data) => authApi.put(`/api/v1/users/${userId}`, data),
+  deleteUser: (userId) => authApi.delete(`/api/v1/users/${userId}`),
+};
+
 // Staff API - uses Auth Service
 export const staffAPI = {
   listStaff: (restaurantId, role) => authApi.get(`/api/v1/users/staff/${restaurantId}`, { params: { role } }),

@@ -1,0 +1,48 @@
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: restaurant-management
+spec:
+  mtls:
+    mode: STRICT  # Enforce mTLS for all services in namespace
+
+---
+# Permissive mode for database namespace (no sidecar injection)
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: database-permissive
+  namespace: restaurant-management
+spec:
+  selector:
+    matchLabels:
+      app: postgresql
+  mtls:
+    mode: PERMISSIVE  # Allow both mTLS and plain text for databases
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: redis-permissive
+  namespace: restaurant-management
+spec:
+  selector:
+    matchLabels:
+      app: redis
+  mtls:
+    mode: PERMISSIVE
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: rabbitmq-permissive
+  namespace: restaurant-management
+spec:
+  selector:
+    matchLabels:
+      app: rabbitmq
+  mtls:
+    mode: PERMISSIVE
