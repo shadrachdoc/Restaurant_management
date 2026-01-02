@@ -22,6 +22,7 @@ KIND_CLUSTER_NAME="restaurant-prod-cluster"
 # Script arguments
 VERSION="${1}"
 DRY_RUN="${2:-false}"
+VALUES_FILE=""  # Will be set by prepare_values_file()
 
 ##############################################################################
 # Helper Functions
@@ -106,6 +107,24 @@ confirm_deployment() {
     fi
 }
 
+prepare_values_file() {
+    log_info "Preparing Helm values file for version $VERSION..."
+
+    # Copy production values template
+    VALUES_FILE="/tmp/values-prod-${VERSION}.yaml"
+
+   cp helm/restaurant-system/values-prod.yaml "$VALUES_FILE"
+
+    if [ "$DRY_RUN" != "dry-run" ]; then
+        # Replace version placeholders
+        sed -i "s/REPLACE_WITH_VERSION/${VERSION}/g" "$VALUES_FILE"
+
+        log_info "Values file prepared at $VALUES_FILE"
+    else
+        log_info "[DRY RUN] Would prepare values file with version $VERSION"
+    fi
+}
+
 pull_docker_images() {
     log_info "Pulling Docker images for version $VERSION..."
 
@@ -158,76 +177,39 @@ load_images_to_kind() {
     log_info "All images loaded into kind cluster."
 }
 
-update_deployments() {
-    log_info "Updating deployments to version $VERSION..."
+deploy_with_helm() {
+    log_info "Deploying with Helm to version $VERSION..."
 
     # Set kubectl context to production cluster
     kubectl config use-context "kind-${KIND_CLUSTER_NAME}"
 
-    # Update frontend deployment
-    log_info "Updating frontend..."
     if [ "$DRY_RUN" != "dry-run" ]; then
-        kubectl set image deployment/frontend \
-            frontend="${DOCKER_REGISTRY}/restaurant-frontend:${VERSION}" \
-            -n "$PROD_NAMESPACE"
-    else
-        log_info "[DRY RUN] Would update frontend to ${VERSION}"
-    fi
+        # Deploy/upgrade using Helm
+        log_info "Running Helm upgrade..."
 
-    # Update API gateway deployment
-    log_info "Updating API gateway..."
-    if [ "$DRY_RUN" != "dry-run" ]; then
-        kubectl set image deployment/api-gateway \
-            api-gateway="${DOCKER_REGISTRY}/restaurant_management_api-gateway:${VERSION}" \
-            -n "$PROD_NAMESPACE"
-    else
-        log_info "[DRY RUN] Would update api-gateway to ${VERSION}"
-    fi
+        helm upgrade restaurant-system helm/restaurant-system \
+            --install \
+            --namespace "$PROD_NAMESPACE" \
+            --create-namespace \
+            --values "$VALUES_FILE" \
+            --wait \
+            --timeout 10m
 
-    # Update auth service deployment
-    log_info "Updating auth service..."
-    if [ "$DRY_RUN" != "dry-run" ]; then
-        kubectl set image deployment/auth-service \
-            auth-service="${DOCKER_REGISTRY}/restaurant_management_auth-service:${VERSION}" \
-            -n "$PROD_NAMESPACE"
-    else
-        log_info "[DRY RUN] Would update auth-service to ${VERSION}"
-    fi
-
-    # Update restaurant service deployment
-    log_info "Updating restaurant service..."
-    if [ "$DRY_RUN" != "dry-run" ]; then
-        kubectl set image deployment/restaurant-service \
-            restaurant-service="${DOCKER_REGISTRY}/restaurant_management_restaurant-service:${VERSION}" \
-            -n "$PROD_NAMESPACE"
-    else
-        log_info "[DRY RUN] Would update restaurant-service to ${VERSION}"
-    fi
-
-    log_info "All deployments updated."
-}
-
-wait_for_rollout() {
-    if [ "$DRY_RUN" == "dry-run" ]; then
-        log_info "[DRY RUN] Would wait for rollout to complete"
-        return
-    fi
-
-    log_info "Waiting for rollout to complete..."
-
-    DEPLOYMENTS=("frontend" "api-gateway" "auth-service" "restaurant-service")
-
-    for deployment in "${DEPLOYMENTS[@]}"; do
-        log_info "Waiting for $deployment rollout..."
-        if ! kubectl rollout status deployment/"$deployment" -n "$PROD_NAMESPACE" --timeout=5m; then
-            log_error "Rollout failed for $deployment"
-            log_error "Run './scripts/rollback-production.sh' to rollback"
+        if [ $? -ne 0 ]; then
+            log_error "Helm deployment failed!"
+            log_error "Check helm status: helm status restaurant-system -n $PROD_NAMESPACE"
             exit 1
         fi
-    done
 
-    log_info "All deployments rolled out successfully."
+        log_info "Helm deployment successful."
+    else
+        log_info "[DRY RUN] Would run: helm upgrade restaurant-system helm/restaurant-system"
+        log_info "[DRY RUN]   --namespace $PROD_NAMESPACE"
+        log_info "[DRY RUN]   --values $VALUES_FILE"
+    fi
 }
+
+# wait_for_rollout function removed - Helm's --wait flag handles this
 
 verify_deployment() {
     if [ "$DRY_RUN" == "dry-run" ]; then
@@ -346,10 +328,10 @@ main() {
     validate_version
     check_prerequisites
     confirm_deployment
+    prepare_values_file
     pull_docker_images
     load_images_to_kind
-    update_deployments
-    wait_for_rollout
+    deploy_with_helm
     verify_deployment
     tag_deployment
     record_deployment

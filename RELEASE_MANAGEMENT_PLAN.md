@@ -585,57 +585,137 @@ Deploy hotfix as new version
 
 ## Configuration Management
 
+We use **Helm** for managing environment-specific configurations. The Helm chart is located at `helm/restaurant-system/`.
+
 ### Environment-Specific Configs
 
-**Dev Environment** (`infrastructure/k8s/overlays/dev/`):
+**Dev Environment** (`helm/restaurant-system/values.yaml`):
 ```yaml
-# kustomization.yaml
+# Default values - used for development
 namespace: restaurant-system
-commonLabels:
-  environment: development
 
-configMapGenerator:
-- name: restaurant-config
-  literals:
-  - ENVIRONMENT=development
-  - LOG_LEVEL=DEBUG
-  - DOMAIN=restaurant.corpv3.com
+# Dev-friendly image settings
+imagePullPolicy: IfNotPresent
 
-secretGenerator:
-- name: restaurant-secrets
-  literals:
-  - JWT_SECRET_KEY=dev-secret-key-change-in-prod
+# Lower replica counts for laptop
+apiGateway:
+  replicaCount: 1
+  image:
+    repository: shadrach85/restaurant_management_api-gateway
+    tag: latest  # Use latest in dev for faster iteration
+
+# Dev resource limits (laptop-friendly)
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+# Dev config
+config:
+  environment: "development"
+  logLevel: "DEBUG"  # Verbose logging in dev
+
+# Dev secrets (not secure - for dev only!)
+secrets:
+  jwtSecretKey: "dev-secret-key-change-in-prod"
 ```
 
-**Production Environment** (`infrastructure/k8s/overlays/prod/`):
+**Production Environment** (`helm/restaurant-system/values-prod.yaml`):
 ```yaml
-# kustomization.yaml
-namespace: restaurant-production
-commonLabels:
-  environment: production
+# Production overrides - use with -f values-prod.yaml
+namespace: restaurant-prod
 
-configMapGenerator:
-- name: restaurant-config
-  literals:
-  - ENVIRONMENT=production
-  - LOG_LEVEL=INFO
-  - DOMAIN=prod.corpv3.com
+# Strict image policy in production
+imagePullPolicy: IfNotPresent
 
-secretGenerator:
-- name: restaurant-secrets
-  literals:
-  - JWT_SECRET_KEY=prod-secret-key-super-secure-random-string
-  - POSTGRES_PASSWORD=prod-db-password-very-secure
+# Higher replica counts for HA
+apiGateway:
+  replicaCount: 2
+  image:
+    repository: shadrach001/restaurant_management_api-gateway
+    tag: "REPLACE_WITH_VERSION"  # Specific version tags in prod
+  autoscaling:
+    enabled: true  # Enable autoscaling in prod
+    minReplicas: 2
+    maxReplicas: 5
+
+# Production resource limits (more resources)
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+# Production config
+config:
+  environment: "production"
+  logLevel: "INFO"  # Less verbose in prod
+
+# Production secrets (MUST be changed!)
+secrets:
+  jwtSecretKey: "REPLACE_WITH_PRODUCTION_SECRET"
+  postgresPassword: "REPLACE_WITH_PRODUCTION_SECRET"
 ```
 
-### Deploying with Kustomize
+### Deploying with Helm
+
+**Development** (on dev laptop):
+```bash
+# Deploy with default values
+helm upgrade restaurant-system helm/restaurant-system \
+  --install \
+  --namespace restaurant-system \
+  --create-namespace \
+  --wait
+
+# Or use explicit dev values
+helm upgrade restaurant-system helm/restaurant-system \
+  --install \
+  --namespace restaurant-system \
+  --values helm/restaurant-system/values.yaml \
+  --wait
+```
+
+**Production** (on prod laptop):
+```bash
+# Deploy with production values
+helm upgrade restaurant-system helm/restaurant-system \
+  --install \
+  --namespace restaurant-prod \
+  --create-namespace \
+  --values helm/restaurant-system/values-prod.yaml \
+  --wait
+
+# Or use the deployment script (recommended)
+./scripts/deploy-production.sh v1.0.0
+```
+
+### Managing Helm Releases
 
 ```bash
-# Dev
-kubectl apply -k infrastructure/k8s/overlays/dev
+# List releases
+helm list -n restaurant-system      # Dev
+helm list -n restaurant-prod         # Prod
 
-# Prod
-kubectl apply -k infrastructure/k8s/overlays/prod
+# Check release status
+helm status restaurant-system -n restaurant-system
+
+# View release history
+helm history restaurant-system -n restaurant-prod
+
+# Rollback to previous release
+helm rollback restaurant-system -n restaurant-prod
+
+# Rollback to specific revision
+helm rollback restaurant-system 3 -n restaurant-prod
+
+# Uninstall release (careful!)
+helm uninstall restaurant-system -n restaurant-prod
 ```
 
 ---
@@ -644,50 +724,39 @@ kubectl apply -k infrastructure/k8s/overlays/prod
 
 ### Initial Setup Script
 
-Create `scripts/setup-production-laptop.sh`:
+The production setup script is already created at `scripts/setup-production-laptop.sh`.
 
+**What it does**:
+1. Checks and installs prerequisites (kubectl, kind, Helm, istioctl)
+2. Creates kind cluster named `restaurant-prod-cluster`
+3. Installs Istio service mesh with production profile
+4. Creates production namespace (`restaurant-prod`)
+5. Installs Nginx Ingress Controller
+6. Sets up Prometheus + Grafana monitoring
+7. Guides you through creating production secrets
+8. Provides DNS configuration instructions
+
+**How to run**:
 ```bash
-#!/bin/bash
-set -e
-
-echo "=========================================="
-echo "Production Laptop Setup"
-echo "=========================================="
-
-echo "Step 1: Creating kind cluster..."
-kind create cluster --name restaurant-prod --config infrastructure/k8s/kind-config-prod.yaml
-
-echo "Step 2: Installing Istio..."
-istioctl install --set profile=production -y
-kubectl label namespace restaurant-production istio-injection=enabled
-
-echo "Step 3: Creating namespace..."
-kubectl create namespace restaurant-production
-
-echo "Step 4: Installing cert-manager..."
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
-
-echo "Step 5: Setting up monitoring..."
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
-
-echo "Step 6: Applying base infrastructure..."
-kubectl apply -k infrastructure/k8s/overlays/prod
-
-echo "Step 7: Setting up Cloudflare tunnel..."
-# Follow Cloudflare tunnel setup guide
-echo "Run: cloudflared tunnel login"
-echo "Then: cloudflared tunnel create restaurant-prod"
-
-echo "=========================================="
-echo "✅ Production laptop setup complete!"
-echo "=========================================="
-echo "Next steps:"
-echo "1. Set up Cloudflare tunnel"
-echo "2. Configure production secrets"
-echo "3. Deploy first release"
+cd ~/Restaurant_management
+./scripts/setup-production-laptop.sh
 ```
+
+**What you need to configure BEFORE running**:
+Edit these files and replace placeholders:
+1. `helm/restaurant-system/values-prod.yaml`:
+   - Production domain (lines 246, 253)
+   - Docker registry/username (all `repository:` lines)
+   - Production secrets (lines 287-289, 204, 224)
+
+2. `scripts/setup-production-laptop.sh`:
+   - Production domain (line 16)
+
+3. `scripts/deploy-production.sh`:
+   - Production domain (line 16)
+   - Docker registry (line 19)
+
+See [PRODUCTION_LAPTOP_SETUP.md](PRODUCTION_LAPTOP_SETUP.md) for detailed configuration instructions.
 
 ### Production-Specific kind Config
 
