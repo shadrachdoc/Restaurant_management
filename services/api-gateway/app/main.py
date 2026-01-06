@@ -129,9 +129,17 @@ async def gateway(
     # Remove host header to avoid conflicts
     headers.pop("host", None)
 
+    # Debug: Check if authorization header exists
+    print(f"DEBUG: Original headers has 'authorization': {'authorization' in headers}")
+    print(f"DEBUG: credentials is None: {credentials is None}")
+    if credentials:
+        print(f"DEBUG: Setting Authorization header from credentials")
+
     # Add authorization header if credentials provided
     if credentials:
-        headers["Authorization"] = f"Bearer {credentials.credentials}"
+        headers["authorization"] = f"Bearer {credentials.credentials}"
+
+    print(f"DEBUG: Final headers has 'authorization': {'authorization' in headers}")
 
     # Get request body
     body = await request.body()
