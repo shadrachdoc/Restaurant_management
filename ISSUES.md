@@ -1,8 +1,18 @@
-# Issues and Fixes - January 6, 2026
+# Issues and Fixes
 
-## Critical Issues Fixed
+This document tracks all major issues encountered in the Restaurant Management System and their solutions.
 
-### 1. User Management Page - 401 Unauthorized Error
+---
+
+## Issue #12: User Management - Authorization and Role Validation (January 6, 2026)
+
+**Date**: January 6, 2026
+**Severity**: Critical
+**Status**: ✅ Resolved
+
+### Critical Issues Fixed
+
+#### 1. User Management Page - 401 Unauthorized Error
 
 **Issue**: User Management page failed to load with "Failed to load resource: 401 Unauthorized" error when trying to fetch `/api/v1/auth/users` endpoint, even with valid master_admin token.
 
@@ -28,7 +38,7 @@ if credentials:
 
 ---
 
-### 2. User Management Endpoint - Incorrect Route Path
+#### 2. User Management Endpoint - Incorrect Route Path
 
 **Issue**: After fixing the authorization issue, the endpoint still returned 422 Unprocessable Entity. The frontend was requesting `/api/v1/auth/users` but the backend endpoint was registered at `/api/v1/auth/` (empty path).
 
@@ -39,22 +49,12 @@ if credentials:
 **Fix Applied**:
 - **File**: `services/auth-service/app/routes/users.py` (line 18)
 - **Change**: Changed endpoint path from `""` to `"/users"`
-- **Code**:
-```python
-# Before:
-@router.get("")
-async def list_users(...)
-
-# After:
-@router.get("/users")
-async def list_users(...)
-```
 
 **Testing**: Endpoint now accessible at `/api/v1/auth/users` matching frontend requests.
 
 ---
 
-### 3. User Creation - Role Validation Error (422)
+#### 3. User Creation - Role Validation Error (422)
 
 **Issue**: When attempting to create a new user via the signup form, requests failed with 422 validation error. The frontend was sending role values in uppercase format (e.g., `"RESTAURANT_ADMIN"`) but the backend enum expected lowercase with underscores (e.g., `"restaurant_admin"`).
 
@@ -66,168 +66,165 @@ async def list_users(...)
 - **File**: `services/auth-service/app/schemas.py`
 - **Changes**: Added `@field_validator` decorators to normalize role values
 - **Schemas Updated**: `UserCreate` (lines 25-42), `UserUpdate` (lines 61-78)
-- **Code**:
-```python
-@field_validator('role', mode='before')
-@classmethod
-def normalize_role(cls, v: Union[str, UserRole]) -> UserRole:
-    """Convert role string to proper enum value (case-insensitive)"""
-    if isinstance(v, UserRole):
-        return v
-    if isinstance(v, str):
-        # Convert to lowercase with underscores
-        normalized = v.lower().replace('-', '_')
-        try:
-            return UserRole(normalized)
-        except ValueError:
-            # If direct match fails, try to match by name
-            for role in UserRole:
-                if role.name.lower() == v.upper().replace('-', '_'):
-                    return role
-            raise ValueError(f"Invalid role: {v}")
-    raise ValueError(f"Role must be a string or UserRole, got {type(v)}")
-```
 
 **Supported Formats**: Now accepts `"RESTAURANT_ADMIN"`, `"restaurant_admin"`, `"restaurant-admin"`, etc.
 
 ---
 
-## Secondary Issues Encountered
+## Issue #11: Cloudflare Tunnel Rate Limiting - Order Tracking HTTP 429 Errors
 
-### 4. Istio Service Mesh Communication Issues
+**Date**: January 2, 2026
+**Severity**: Medium
+**Status**: ✅ Resolved
 
-**Issue**: When Istio sidecar injection was disabled on auth-service for debugging, the API Gateway (with Istio) could not communicate with auth-service (without Istio), resulting in "Invalid HTTP request" errors.
+### Problem Description
 
-**Root Cause**: Istio uses mTLS (mutual TLS) for service-to-service communication. Mixed mode (some services with Istio, some without) caused protocol mismatch.
+User reported HTTP 500 and HTTP 429 (Too Many Requests) errors after completing an order in the customer screen. The errors appeared in the browser console when trying to fetch order status updates.
 
-**Resolution**: Re-enabled Istio injection on auth-service to maintain consistent service mesh across all services.
+### Root Cause
 
-**Command**:
+**Primary Issue**: Frontend was aggressively polling order status every 3 seconds, triggering Cloudflare Tunnel's rate limiting.
+
+### Solution
+
+Changed polling frequency from 3 seconds to 10 seconds in order tracking pages:
+
+**Files Modified**:
+1. `frontend/src/pages/Customer/OrderTracking.jsx` - Line 64
+2. `frontend/src/pages/Customer/OrderTrackingPage.jsx` - Line 49
+
+```javascript
+// Before:
+const interval = setInterval(fetchOrder, 3000); // Poll every 3 seconds
+
+// After:
+const interval = setInterval(fetchOrder, 10000); // Poll every 10 seconds to avoid rate limiting
+```
+
+---
+
+## Issue #10: API Requests Failing with 503 - Istio VirtualService Misconfiguration
+
+**Date**: January 1, 2026
+**Severity**: Critical
+**Status**: ✅ Resolved
+
+### Problem Description
+
+All API requests to analytics endpoints were failing with HTTP 503 (Service Unavailable). Frontend loaded correctly, but backend API calls were being blocked.
+
+### Root Cause
+
+**Primary Issue**: Istio VirtualService for order-service was configured with incorrect port (8001 instead of 8004)
+
+### Solution
+
+**Fixed order-service VirtualService**:
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: order-service
+  namespace: restaurant-system
+spec:
+  hosts:
+  - order-service
+  http:
+  - route:
+    - destination:
+        host: order-service
+        port:
+          number: 8004  # ✅ Correct port (was 8001)
+    timeout: 15s
+    retries:
+      attempts: 3
+      perTryTimeout: 5s
+```
+
+---
+
+## Issue #9: Order Service Database Connection Failure - Worker Node Failure & PostgreSQL Restart
+
+**Date**: January 1, 2026
+**Severity**: High
+**Status**: ✅ Resolved
+
+### Problem Description
+
+Order service failing to start with database connection error: `socket.gaierror: [Errno -3] Temporary failure in name resolution`. All database-dependent services were in CrashLoopBackOff state.
+
+### Root Cause
+
+**Primary Issues**:
+1. PostgreSQL pod stuck in "Terminating" state after cluster restart
+2. Worker node (worker2) in "NotReady" state
+3. StatefulSet PVC bound to failed worker node
+4. Services unable to resolve database hostname
+
+### Solution
+
+**Step 1**: Force delete stuck PostgreSQL pod
+**Step 2**: Restart failed worker node (stayed NotReady)
+**Step 3**: Cordon failed node
+**Step 4**: Delete and recreate PostgreSQL StatefulSet PVC (⚠️ data loss acceptable in dev)
+**Step 5**: Restart all database-dependent services
+
+---
+
+## Issue #8: Observability Dashboards Not Accessible - Cluster Networking Failure
+
+**Date**: January 1, 2026
+**Severity**: Critical
+**Status**: ✅ Resolved
+
+### Problem Description
+
+All observability dashboards (Grafana, Kiali, ArgoCD) became inaccessible. Multiple pods in CrashLoopBackOff state.
+
+### Root Cause
+
+- Cluster had been running for 28 days without restart
+- Accumulated iptables rules or networking state corruption
+- CNI unable to properly route pod-to-pod traffic
+- Kubernetes API server (`10.96.0.1:443`) unreachable from pods
+
+### Solution
+
+**Step 1**: Restart cluster containers
 ```bash
-kubectl patch deployment auth-service -n restaurant-system -p '{"spec":{"template":{"metadata":{"annotations":{"sidecar.istio.io/inject":"true"}}}}}'
+docker restart restaurant-cluster-control-plane restaurant-cluster-worker restaurant-cluster-worker2
 ```
 
----
+**Step 2**: Fix Grafana PVC permission issues by recreating PVC
 
-### 5. Logout Endpoint - 422 Validation Error
+**Step 3**: Remove plugin installation from Grafana ConfigMap
 
-**Issue**: POST /api/v1/auth/logout endpoint returns 422 Unprocessable Entity.
+**Step 4**: Verify all pods running
 
-**Root Cause**: The logout endpoint expects a `TokenRefreshRequest` body with a `refresh_token` field, but the frontend is likely sending an empty body or incorrect format.
-
-**Status**: **NOT FIXED** - This is a frontend issue where the logout request is not sending the required `refresh_token` in the request body.
-
-**Expected Request Body**:
-```json
-{
-  "refresh_token": "the_refresh_token_string"
-}
-```
+**Step 5**: Start port-forwards for dashboard access
 
 ---
 
-## Deployment Images Used
+## Summary Table
 
-### Production Images (Final State)
-- **API Gateway**: `shadrach85/api-gateway:debug-auth` (with authorization header fix)
-- **Auth Service**: `shadrach85/auth-service:users-path-fix` (with role validation and path fix)
-
-### Debug Images Created During Troubleshooting
-- `shadrach85/auth-service:role-fix` - Initial role validator attempt
-- `shadrach85/auth-service:role-fix-v2` - Role validator with UserResponse
-- `shadrach85/auth-service:role-fix-v3` - Removed validator from UserResponse
-- `shadrach85/auth-service:debug-users` - Added debug logging
-- `shadrach85/auth-service:debug-deps` - Added dependency debug logging
-- `shadrach85/auth-service:debug-v2` - Manual serialization attempt
-- `shadrach85/auth-service:no-response-model` - Removed response_model
+| Issue | Severity | Component | Status | Date Resolved |
+|-------|----------|-----------|--------|---------------|
+| #12 | Critical | User Management | ✅ Resolved | Jan 6, 2026 |
+| #11 | Medium | Frontend/Cloudflare | ✅ Resolved | Jan 2, 2026 |
+| #10 | Critical | Istio VirtualService | ✅ Resolved | Jan 1, 2026 |
+| #9 | High | Database/Worker Node | ✅ Resolved | Jan 1, 2026 |
+| #8 | Critical | Observability | ✅ Resolved | Jan 1, 2026 |
 
 ---
 
-## Files Modified
+## Lessons Learned
 
-### 1. services/api-gateway/app/main.py
-**Lines Changed**: 127-142
-**Purpose**: Fix Authorization header forwarding with correct case
-**Status**: ✅ Production-ready
-
-### 2. services/auth-service/app/routes/users.py
-**Lines Changed**: 18
-**Purpose**: Correct endpoint path from "" to "/users"
-**Status**: ✅ Production-ready
-
-### 3. services/auth-service/app/schemas.py
-**Lines Added**:
-- UserCreate validator (lines 25-42)
-- UserUpdate validator (lines 61-78)
-- UserResponse model_config (line 62)
-**Purpose**: Case-insensitive role validation
-**Status**: ✅ Production-ready
-
-### 4. services/auth-service/app/dependencies.py
-**Lines Added**: 61-70 (DEBUG logging - should be removed)
-**Purpose**: Debug logging for troubleshooting
-**Status**: ⚠️ Remove debug prints before production
-
----
-
-## Debugging Process Summary
-
-1. **Initial Investigation**: Checked browser DevTools and confirmed Authorization header was being sent correctly by frontend
-2. **API Gateway Analysis**: Added debug logging to verify header forwarding
-3. **Auth Service Investigation**: Checked JWT token validation and role comparison
-4. **Istio Testing**: Temporarily disabled Istio to isolate the issue (caused new issues)
-5. **Route Path Discovery**: Found mismatch between frontend request path and backend endpoint path
-6. **Role Validation**: Discovered case sensitivity issue with enum validation
-
----
-
-## Recommendations
-
-### Immediate Actions Required
-
-1. **Remove Debug Logging**: Clean up debug print statements from production code
-   - `services/auth-service/app/dependencies.py` (lines 61-70)
-   - `services/auth-service/app/routes/users.py` (debug prints)
-
-2. **Update Frontend Logout**: Fix logout functionality to send proper request body with `refresh_token`
-
-3. **Build Final Production Images**: Create clean images without debug logging
-   ```bash
-   docker build -t shadrach85/api-gateway:v1.0.0 -f services/api-gateway/Dockerfile .
-   docker build -t shadrach85/auth-service:v1.0.0 -f services/auth-service/Dockerfile .
-   ```
-
-### Future Improvements
-
-1. **Consistent Role Format**: Consider updating frontend to send role values in the backend's expected format to avoid conversion overhead
-
-2. **API Gateway Tests**: Add integration tests for header forwarding to prevent regression
-
-3. **Pydantic Validators**: Consider centralizing enum validators in a shared module
-
-4. **Error Handling**: Add better error messages for 422 validation errors to help with debugging
-
----
-
-## Testing Checklist
-
-- [x] User Management page loads successfully
-- [x] User list displays correctly
-- [ ] User creation via signup form works
-- [ ] User logout functionality works (pending frontend fix)
-- [x] Authorization header properly forwarded through API Gateway
-- [x] Istio service mesh communication working
-- [x] All pods running with 2/2 containers (Istio sidecars)
-
----
-
-## Related Documentation
-
-- See `infrastructure/kubernetes/api-gateway-deployment.yaml` for API Gateway configuration
-- See `infrastructure/kubernetes/auth-service-deployment.yaml` for Auth Service configuration
-- See `shared/models/enums.py` for UserRole enum definition
+1. **Long-running clusters need periodic restarts**: Kind clusters can accumulate networking state issues over time
+2. **StatefulSet PVC Locality**: If a node fails, pods cannot reschedule unless PVC is deleted or node recovered
+3. **VirtualService port configuration is critical**: Always verify ports match actual service ports
+4. **Rate Limiting Can Occur at Multiple Layers**: Application, service mesh, ingress, and CDN/tunnel layers
+5. **Authorization header casing matters**: Use lowercase keys when working with request.headers dictionaries
 
 ---
 
 **Last Updated**: January 6, 2026
-**Status**: User Management functionality restored and working

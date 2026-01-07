@@ -1,13 +1,14 @@
 """
 Auth Service - Main application
 """
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from shared.config.settings import settings
 from shared.utils.logger import setup_logger
 from .database import init_db, close_db
 from .routes import auth, users
+import time
 
 # Setup logger
 logger = setup_logger("auth-service", settings.log_level, settings.log_format)
@@ -45,6 +46,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Debug middleware to log headers
+@app.middleware("http")
+async def log_headers(request: Request, call_next):
+    """Log incoming request headers for debugging"""
+    if "/api/v1/auth/users" in request.url.path:
+        print(f"DEBUG AUTH SERVICE: Received request to {request.url.path}")
+        print(f"DEBUG AUTH SERVICE: Authorization header = {request.headers.get('authorization', 'NOT FOUND')}")
+        print(f"DEBUG AUTH SERVICE: All headers = {dict(request.headers)}")
+    response = await call_next(request)
+    return response
 
 # Include routers
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])

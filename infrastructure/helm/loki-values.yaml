@@ -1,0 +1,143 @@
+loki:
+  enabled: true
+
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClassName: "standard"
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  config:
+    auth_enabled: false
+
+    ingester:
+      chunk_idle_period: 3m
+      chunk_block_size: 262144
+      chunk_retain_period: 1m
+      max_transfer_retries: 0
+      lifecycler:
+        ring:
+          kvstore:
+            store: inmemory
+          replication_factor: 1
+
+    limits_config:
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+      max_entries_limit_per_query: 5000
+      max_streams_per_user: 0
+      max_query_length: 721h
+
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 9096
+
+    storage_config:
+      boltdb_shipper:
+        active_index_directory: /data/loki/boltdb-shipper-active
+        cache_location: /data/loki/boltdb-shipper-cache
+        cache_ttl: 24h
+        shared_store: filesystem
+      filesystem:
+        directory: /data/loki/chunks
+
+    chunk_store_config:
+      max_look_back_period: 168h  # 7 days retention
+
+    table_manager:
+      retention_deletes_enabled: true
+      retention_period: 168h  # 7 days
+
+    compactor:
+      working_directory: /data/loki/compactor
+      shared_store: filesystem
+      compaction_interval: 10m
+
+promtail:
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  config:
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+
+    positions:
+      filename: /tmp/positions.yaml
+
+    scrape_configs:
+      # Kubernetes pod logs
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        pipeline_stages:
+          - docker: {}
+        relabel_configs:
+          # Only scrape pods with logging enabled
+          - source_labels: [__meta_kubernetes_pod_controller_name]
+            action: drop
+            regex: '([0-9a-z-.]+-)?(kube-system|istio-system)'
+
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: node_name
+
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod_name
+
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            target_label: container_name
+
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            target_label: app
+
+          - source_labels: [__meta_kubernetes_pod_label_version]
+            target_label: version
+
+          - replacement: /var/log/pods/*$1/*.log
+            separator: /
+            source_labels:
+              - __meta_kubernetes_pod_uid
+              - __meta_kubernetes_pod_container_name
+            target_label: __path__
+
+      # System logs
+      - job_name: system
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              job: varlogs
+              __path__: /var/log/*log
+
+grafana:
+  enabled: false  # We're installing Grafana separately
+
+fluent-bit:
+  enabled: false  # Using Promtail instead

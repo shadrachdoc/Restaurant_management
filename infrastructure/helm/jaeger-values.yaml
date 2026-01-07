@@ -1,0 +1,84 @@
+# Jaeger all-in-one deployment (suitable for dev/staging)
+# For production, use separate collector, query, and agent components
+
+provisionDataStore:
+  cassandra: false
+  elasticsearch: false
+
+allInOne:
+  enabled: true
+  image:
+    tag: "1.51.0"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # Enable ingestion from Istio's Envoy proxies
+  extraEnv:
+    - name: COLLECTOR_ZIPKIN_HOST_PORT
+      value: ":9411"
+    - name: SPAN_STORAGE_TYPE
+      value: "badger"
+
+storage:
+  type: badger
+  badger:
+    ephemeral: false
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "standard"
+    # Data retention
+    ttl: 48h  # 2 days
+
+agent:
+  enabled: false  # Using all-in-one
+
+collector:
+  enabled: false  # Using all-in-one
+  service:
+    zipkin:
+      port: 9411
+
+query:
+  enabled: false  # Using all-in-one
+  service:
+    type: LoadBalancer
+    port: 80
+
+# Ingress for Jaeger UI (optional)
+ingress:
+  enabled: false
+
+# Service configuration for all-in-one
+service:
+  type: ClusterIP
+  zipkin:
+    port: 9411
+  grpc:
+    port: 14250
+  httpQuery:
+    port: 16686
+
+# Sampling configuration
+# This is configured in Istio, but can be overridden here
+sampling:
+  strategies: |
+    {
+      "default_strategy": {
+        "type": "probabilistic",
+        "param": 1.0
+      },
+      "service_strategies": [
+        {
+          "service": "order-service",
+          "type": "probabilistic",
+          "param": 1.0
+        }
+      ]
+    }

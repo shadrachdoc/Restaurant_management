@@ -1,0 +1,216 @@
+server:
+  persistentVolume:
+    enabled: true
+    size: 50Gi
+    storageClass: "standard"
+
+  retention: "15d"
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+  global:
+    scrape_interval: 15s
+    evaluation_interval: 15s
+
+alertmanager:
+  enabled: true
+  persistentVolume:
+    enabled: true
+    size: 10Gi
+    storageClass: "standard"
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 100m
+      memory: 256Mi
+
+nodeExporter:
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 50Mi
+    limits:
+      cpu: 200m
+      memory: 100Mi
+
+pushgateway:
+  enabled: false
+
+kubeStateMetrics:
+  enabled: true
+
+# Scrape configs for Istio and application services
+serverFiles:
+  prometheus.yml:
+    scrape_configs:
+      # Kubernetes pods with prometheus.io annotations
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: pod
+
+      # Istio mesh metrics
+      - job_name: 'istio-mesh'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - istio-system
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: istio-telemetry;prometheus
+
+      # Envoy sidecar stats
+      - job_name: 'envoy-stats'
+        metrics_path: /stats/prometheus
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_container_port_name]
+            action: keep
+            regex: '.*-envoy-prom'
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:15090
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: pod_name
+
+      # Istiod metrics
+      - job_name: 'istiod'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - istio-system
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: istiod;http-monitoring
+
+      # Istio Ingress Gateway
+      - job_name: 'istio-ingressgateway'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - istio-system
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: istio-ingressgateway
+          - source_labels: [__address__]
+            action: replace
+            regex: ([^:]+)(?::\d+)?
+            replacement: $1:15020
+            target_label: __address__
+
+  # Alert rules
+  alerts:
+    groups:
+      - name: restaurant_alerts
+        interval: 30s
+        rules:
+          # High error rate
+          - alert: HighErrorRate
+            expr: |
+              sum(rate(istio_requests_total{response_code=~"5.*"}[5m])) by (destination_service)
+              /
+              sum(rate(istio_requests_total[5m])) by (destination_service)
+              > 0.05
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "High error rate detected"
+              description: "{{ $labels.destination_service }} has error rate above 5%"
+
+          # High latency
+          - alert: HighLatency
+            expr: |
+              histogram_quantile(0.95,
+                sum(rate(istio_request_duration_milliseconds_bucket[5m])) by (le, destination_service)
+              ) > 1000
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High latency detected"
+              description: "{{ $labels.destination_service }} P95 latency is above 1000ms"
+
+          # Pod down
+          - alert: PodDown
+            expr: |
+              kube_deployment_status_replicas_available{namespace="restaurant-management"}
+              <
+              kube_deployment_spec_replicas{namespace="restaurant-management"}
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Pod is down"
+              description: "{{ $labels.deployment }} has fewer pods than expected"
+
+          # High CPU usage
+          - alert: HighCPUUsage
+            expr: |
+              sum(rate(container_cpu_usage_seconds_total{namespace="restaurant-management"}[5m])) by (pod)
+              /
+              sum(container_spec_cpu_quota{namespace="restaurant-management"} / container_spec_cpu_period{namespace="restaurant-management"}) by (pod)
+              > 0.8
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High CPU usage"
+              description: "{{ $labels.pod }} is using more than 80% CPU"
+
+          # High memory usage
+          - alert: HighMemoryUsage
+            expr: |
+              sum(container_memory_working_set_bytes{namespace="restaurant-management"}) by (pod)
+              /
+              sum(container_spec_memory_limit_bytes{namespace="restaurant-management"}) by (pod)
+              > 0.8
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High memory usage"
+              description: "{{ $labels.pod }} is using more than 80% memory"

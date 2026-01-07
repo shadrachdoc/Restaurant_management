@@ -144,6 +144,10 @@ async def gateway(
     # Get request body
     body = await request.body()
 
+    # Debug log headers being sent
+    if "/users" in path:
+        print(f"DEBUG: Headers being sent to backend: {headers}")
+
     # Forward request to target service
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
@@ -154,6 +158,10 @@ async def gateway(
                 content=body,
                 params=request.query_params
             )
+
+            # Debug log error responses
+            if response.status_code >= 400 and "/users" in path:
+                print(f"DEBUG: Error response {response.status_code}: {response.text}")
 
             # Return response from target service
             return Response(

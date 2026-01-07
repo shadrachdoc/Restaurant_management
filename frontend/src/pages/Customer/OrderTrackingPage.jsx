@@ -45,8 +45,8 @@ const OrderTrackingPage = () => {
     if (orderId) {
       fetchOrder();
 
-      // Poll for updates every 3 seconds
-      const interval = setInterval(fetchOrder, 3000);
+      // Poll for updates every 10 seconds to avoid rate limiting
+      const interval = setInterval(fetchOrder, 10000);
       return () => {
         isMounted = false;
         clearInterval(interval);

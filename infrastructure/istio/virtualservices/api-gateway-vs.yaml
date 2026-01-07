@@ -1,0 +1,58 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: api-gateway
+  namespace: restaurant-management
+spec:
+  hosts:
+    - "restaurant.corpv3.com"
+  gateways:
+    - restaurant-gateway
+  http:
+    # API routes - direct to API Gateway
+    - match:
+        - uri:
+            prefix: "/api/v1/"
+      route:
+        - destination:
+            host: api-gateway
+            port:
+              number: 8000
+          weight: 100
+      timeout: 30s
+      retries:
+        attempts: 3
+        perTryTimeout: 10s
+        retryOn: "5xx,reset,connect-failure,refused-stream"
+      headers:
+        request:
+          add:
+            x-forwarded-proto: "http"
+        response:
+          add:
+            x-served-by: "istio-gateway"
+
+    # Health check endpoints
+    - match:
+        - uri:
+            exact: "/health"
+        - uri:
+            exact: "/api/v1/health"
+      route:
+        - destination:
+            host: api-gateway
+            port:
+              number: 8000
+      timeout: 5s
+
+    # Frontend routes - everything else goes to React app
+    - match:
+        - uri:
+            prefix: "/"
+      route:
+        - destination:
+            host: frontend
+            port:
+              number: 80
+          weight: 100
+      timeout: 10s

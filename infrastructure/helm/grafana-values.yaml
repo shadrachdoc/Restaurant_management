@@ -1,0 +1,130 @@
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClassName: "standard"
+
+# Admin credentials (change in production!)
+adminUser: admin
+adminPassword: "changeme123"
+
+service:
+  type: LoadBalancer
+  port: 80
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Data sources configuration
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      # Prometheus
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-server.istio-system:80
+        access: proxy
+        isDefault: true
+        jsonData:
+          timeInterval: "15s"
+
+      # Loki
+      - name: Loki
+        type: loki
+        url: http://loki.istio-system:3100
+        access: proxy
+
+      # Jaeger
+      - name: Jaeger
+        type: jaeger
+        url: http://jaeger-query.istio-system:16686
+        access: proxy
+
+# Dashboard providers
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'istio'
+        orgId: 1
+        folder: 'Istio'
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/istio
+
+      - name: 'kubernetes'
+        orgId: 1
+        folder: 'Kubernetes'
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/kubernetes
+
+      - name: 'restaurant'
+        orgId: 1
+        folder: 'Restaurant'
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/restaurant
+
+# Pre-configured Istio dashboards from grafana.com
+dashboards:
+  istio:
+    istio-mesh-dashboard:
+      gnetId: 7639
+      revision: 144
+      datasource: Prometheus
+    istio-service-dashboard:
+      gnetId: 7636
+      revision: 144
+      datasource: Prometheus
+    istio-workload-dashboard:
+      gnetId: 7630
+      revision: 144
+      datasource: Prometheus
+    istio-performance-dashboard:
+      gnetId: 11829
+      revision: 144
+      datasource: Prometheus
+    istio-control-plane-dashboard:
+      gnetId: 7645
+      revision: 144
+      datasource: Prometheus
+
+  kubernetes:
+    kubernetes-cluster-monitoring:
+      gnetId: 315
+      revision: 3
+      datasource: Prometheus
+    kubernetes-pod-monitoring:
+      gnetId: 6417
+      revision: 1
+      datasource: Prometheus
+
+# Plugins to install
+plugins:
+  - grafana-piechart-panel
+  - grafana-clock-panel
+  - grafana-polystat-panel
+
+# Environment variables
+env:
+  GF_EXPLORE_ENABLED: "true"
+  GF_PANELS_DISABLE_SANITIZE_HTML: "true"
+  GF_FEATURE_TOGGLES_ENABLE: "traceqlEditor"
+
+# Enable anonymous access for dashboards (optional, for public viewing)
+# grafana.ini:
+#   auth.anonymous:
+#     enabled: true
+#     org_role: Viewer
