@@ -230,9 +230,25 @@ const OrderTrackingPage = () => {
 
           <div className="space-y-3">
             {order.items?.map((item) => (
-              <div key={item.id} className="flex justify-between items-center py-2 border-b last:border-0">
+              <div key={item.id} className="flex items-center gap-4 py-2 border-b last:border-0">
+                {/* Menu Item Image */}
+                {item.item_image_url && (
+                  <img
+                    src={item.item_image_url}
+                    alt={item.item_name}
+                    className="w-20 h-20 object-cover rounded-lg shadow-sm"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                )}
+                {!item.item_image_url && (
+                  <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
+                    <span className="text-3xl">🍽️</span>
+                  </div>
+                )}
                 <div className="flex-1">
-                  <p className="font-medium">{item.menu_item_name}</p>
+                  <p className="font-medium">{item.item_name}</p>
                   <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
                   {item.special_instructions && (
                     <p className="text-sm text-gray-600 italic mt-1">
@@ -241,7 +257,7 @@ const OrderTrackingPage = () => {
                   )}
                 </div>
                 <p className="font-semibold">
-                  ${(parseFloat(item.price) * item.quantity).toFixed(2)}
+                  ${(parseFloat(item.item_price) * item.quantity).toFixed(2)}
                 </p>
               </div>
             ))}
@@ -276,17 +292,28 @@ const OrderTrackingPage = () => {
         <div className="bg-white rounded-lg shadow p-6 space-y-4">
           <h2 className="text-xl font-semibold mb-4">Actions</h2>
 
-          {/* Generate Receipt Button - Only show for SERVED orders */}
-          {order.status === 'served' && (
+          {/* Debug: Show current status */}
+          <div className="mb-4 p-3 bg-gray-100 rounded text-sm">
+            <p className="font-medium">Debug Info:</p>
+            <p>Order Status: <span className="font-mono">{order.status}</span></p>
+            <p>Status Type: {typeof order.status}</p>
+          </div>
+
+          {/* Generate Receipt Button - Show for SERVED or COMPLETED orders */}
+          {(order.status === 'served' || order.status === 'SERVED' || order.status === 'completed' || order.status === 'COMPLETED') && (
             <button
               onClick={handleGenerateReceipt}
-              disabled={generatingReceipt}
+              disabled={generatingReceipt || order.status === 'completed' || order.status === 'COMPLETED'}
               className="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg shadow-md"
             >
               {generatingReceipt ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                   Generating Receipt...
+                </>
+              ) : (order.status === 'completed' || order.status === 'COMPLETED') ? (
+                <>
+                  ✅ Receipt Already Generated
                 </>
               ) : (
                 <>
@@ -299,7 +326,15 @@ const OrderTrackingPage = () => {
           {/* Other Actions */}
           <div className="flex flex-col sm:flex-row gap-4">
             <button
-              onClick={() => navigate(`/customer/menu?restaurant=${order.restaurant_slug}`)}
+              onClick={() => {
+                if (order.table_id && order.restaurant_id) {
+                  navigate(`/table/${order.restaurant_id}/${order.table_id}`);
+                } else if (order.restaurant_slug) {
+                  navigate(`/customer/menu?restaurant=${order.restaurant_slug}`);
+                } else {
+                  navigate('/customer-login');
+                }
+              }}
               className="flex-1 bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md"
             >
               🍽️ Order Again

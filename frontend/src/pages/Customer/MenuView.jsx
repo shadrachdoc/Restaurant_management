@@ -135,32 +135,53 @@ export default function MenuView() {
               <h2 className="text-2xl font-bold text-gray-900 mb-6">{category}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {categoryItems.map((item) => (
-                  <div key={item.id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="text-lg font-bold text-gray-900">{item.name}</h3>
-                      <span className="text-xl font-bold text-blue-600">{restaurant?.currency_symbol || '$'}{item.price.toFixed(2)}</span>
+                  <div key={item.id} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                    {/* Menu Item Image */}
+                    {item.image_url && (
+                      <div className="w-full h-48 overflow-hidden">
+                        <img
+                          src={item.image_url}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                    {!item.image_url && (
+                      <div className="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                        <span className="text-6xl">🍽️</span>
+                      </div>
+                    )}
+
+                    <div className="p-6">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="text-lg font-bold text-gray-900">{item.name}</h3>
+                        <span className="text-xl font-bold text-blue-600">{restaurant?.currency_symbol || '$'}{item.price.toFixed(2)}</span>
+                      </div>
+
+                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">{item.description}</p>
+
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {item.is_vegetarian && (
+                          <span className="badge badge-success text-xs">🌱 Vegetarian</span>
+                        )}
+                        {item.is_vegan && (
+                          <span className="badge badge-success text-xs">🥬 Vegan</span>
+                        )}
+                        {item.preparation_time && (
+                          <span className="badge badge-info text-xs">⏱️ {item.preparation_time} min</span>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => addToCart(item)}
+                        className="w-full btn-primary flex items-center justify-center gap-2"
+                      >
+                        <FiPlus /> Add to Cart
+                      </button>
                     </div>
-
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">{item.description}</p>
-
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {item.is_vegetarian && (
-                        <span className="badge badge-success text-xs">🌱 Vegetarian</span>
-                      )}
-                      {item.is_vegan && (
-                        <span className="badge badge-success text-xs">🥬 Vegan</span>
-                      )}
-                      {item.preparation_time && (
-                        <span className="badge badge-info text-xs">⏱️ {item.preparation_time} min</span>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={() => addToCart(item)}
-                      className="w-full btn-primary flex items-center justify-center gap-2"
-                    >
-                      <FiPlus /> Add to Cart
-                    </button>
                   </div>
                 ))}
               </div>

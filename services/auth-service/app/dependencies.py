@@ -58,9 +58,14 @@ async def require_master_admin(
     current_user: User = Depends(get_current_user)
 ) -> User:
     """Require master admin role"""
+    print(f"DEBUG require_master_admin: user={current_user.username}, role={current_user.role}, role_type={type(current_user.role)}")
+    print(f"DEBUG require_master_admin: UserRole.MASTER_ADMIN={UserRole.MASTER_ADMIN}, type={type(UserRole.MASTER_ADMIN)}")
+    print(f"DEBUG require_master_admin: Comparison result={current_user.role != UserRole.MASTER_ADMIN}")
     if current_user.role != UserRole.MASTER_ADMIN:
+        print(f"DEBUG require_master_admin: RAISING 403")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized. Master admin access required."
         )
+    print(f"DEBUG require_master_admin: SUCCESS")
     return current_user
