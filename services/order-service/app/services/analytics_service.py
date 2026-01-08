@@ -802,7 +802,7 @@ async def get_demand_predictions(
                     AND o.status IN ('SERVED', 'PREPARING', 'COMPLETED')
                     AND DATE(o.created_at) >= CURRENT_DATE - INTERVAL '90 days'
                 GROUP BY oi.menu_item_id, mi.name
-                HAVING SUM(oi.quantity) >= 10  -- Only items with meaningful sales volume (avg 0.11/day)
+                HAVING SUM(oi.quantity) >= 5  -- Only items with meaningful sales volume (lowered for testing)
                 ORDER BY total_quantity DESC
                 LIMIT 5
             ),
