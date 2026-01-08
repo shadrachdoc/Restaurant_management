@@ -132,7 +132,7 @@ customerService:
   name: customer-service
   replicaCount: 1
   image:
-    repository: restaurant_management_customer-service
+    repository: shadrach85/customer-service
     tag: 739884b
     pullPolicy: Always
   service:
