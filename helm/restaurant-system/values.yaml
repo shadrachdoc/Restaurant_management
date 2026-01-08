@@ -134,7 +134,7 @@ customerService:
   image:
     repository: shadrach85/customer-service
     tag: 739884b
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
   service:
     type: ClusterIP
     port: 8007
