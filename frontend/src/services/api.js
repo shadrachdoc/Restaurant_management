@@ -98,21 +98,21 @@ export const authAPI = {
 
 // User Management API - uses Auth Service (Master Admin)
 export const userAPI = {
-  listUsers: () => authApi.get('/api/v1/users'),
-  getUser: (userId) => authApi.get(`/api/v1/users/${userId}`),
-  updateUser: (userId, data) => authApi.put(`/api/v1/users/${userId}`, data),
-  deleteUser: (userId) => authApi.delete(`/api/v1/users/${userId}`),
+  listUsers: () => authApi.get('/api/v1/auth/users'),
+  getUser: (userId) => authApi.get(`/api/v1/auth/${userId}`),
+  updateUser: (userId, data) => authApi.put(`/api/v1/auth/${userId}`, data),
+  deleteUser: (userId) => authApi.delete(`/api/v1/auth/${userId}`),
 };
 
 // Staff API - uses Auth Service
 export const staffAPI = {
-  listStaff: (restaurantId, role) => authApi.get(`/api/v1/users/staff/${restaurantId}`, { params: { role } }),
-  createChef: (data) => authApi.post('/api/v1/users/chef', data),
-  createCustomer: (data) => authApi.post('/api/v1/users/customer', data),
-  updateStaff: (userId, data) => authApi.patch(`/api/v1/users/${userId}`, data),
-  toggleStatus: (userId) => authApi.patch(`/api/v1/users/${userId}/toggle-status`),
-  deleteChef: (chefId) => authApi.delete(`/api/v1/users/chef/${chefId}`),
-  deleteCustomer: (customerId) => authApi.delete(`/api/v1/users/customer/${customerId}`),
+  listStaff: (restaurantId, role) => authApi.get(`/api/v1/auth/staff/${restaurantId}`, { params: { role } }),
+  createChef: (data) => authApi.post('/api/v1/auth/chef', data),
+  createCustomer: (data) => authApi.post('/api/v1/auth/customer', data),
+  updateStaff: (userId, data) => authApi.patch(`/api/v1/auth/${userId}`, data),
+  toggleStatus: (userId) => authApi.patch(`/api/v1/auth/${userId}/toggle-status`),
+  deleteChef: (chefId) => authApi.delete(`/api/v1/auth/chef/${chefId}`),
+  deleteCustomer: (customerId) => authApi.delete(`/api/v1/auth/customer/${customerId}`),
 };
 
 // Restaurant API - uses Restaurant Service
