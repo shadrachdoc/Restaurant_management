@@ -104,8 +104,8 @@ orderService:
   replicaCount: 1
   image:
     repository: shadrach85/order-service
-    tag: b08c38b
-    pullPolicy: Always
+    tag: 174a6f3
+    pullPolicy: IfNotPresent
   service:
     type: ClusterIP
     port: 8004
