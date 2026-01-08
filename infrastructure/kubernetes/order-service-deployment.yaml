@@ -16,6 +16,10 @@ spec:
       labels:
         app: order-service
         tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8004"
+        prometheus.io/path: "/metrics"
     spec:
       affinity:
         nodeAffinity:
@@ -28,7 +32,7 @@ spec:
                 - restaurant-cluster-worker
       containers:
       - name: order-service
-        image: shadrach85/restaurant-order-service:with-restaurant-slug
+        image: shadrach85/order-service:739884b
         imagePullPolicy: Always
         ports:
         - containerPort: 8004

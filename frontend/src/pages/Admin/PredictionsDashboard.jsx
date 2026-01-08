@@ -3,6 +3,7 @@
  * Strategic planning dashboard with ML-powered demand forecasting
  */
 import React, { useState, useEffect } from 'react';
+import DashboardLayout from '../../components/layout/DashboardLayout';
 import PeriodSelector from '../../components/PeriodSelector';
 import { TrendLineChart, PopularItemsChart } from '../../components/charts';
 
@@ -141,6 +142,7 @@ const PredictionsDashboard = () => {
   }
 
   return (
+    <DashboardLayout>
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
       <div className="mb-6">
@@ -380,6 +382,7 @@ const PredictionsDashboard = () => {
         </>
       )}
     </div>
+    </DashboardLayout>
   );
 };
 
