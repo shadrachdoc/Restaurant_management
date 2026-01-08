@@ -159,8 +159,8 @@ frontend:
   replicaCount: 1
   image:
     repository: shadrach85/restaurant-frontend
-    tag: b08c38b
-    pullPolicy: Always
+    tag: fcd59e2
+    pullPolicy: IfNotPresent
   service:
     type: ClusterIP
     port: 80
