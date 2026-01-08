@@ -78,8 +78,8 @@ restaurantService:
   replicaCount: 1
   image:
     repository: shadrach85/restaurant-service
-    tag: 030708d
-    pullPolicy: Always
+    tag: b08c38b
+    pullPolicy: IfNotPresent
   service:
     type: ClusterIP
     port: 8003
@@ -159,8 +159,8 @@ frontend:
   replicaCount: 1
   image:
     repository: shadrach85/restaurant-frontend
-    tag: 030708d
-    pullPolicy: Always
+    tag: b08c38b
+    pullPolicy: IfNotPresent
   service:
     type: ClusterIP
     port: 80
