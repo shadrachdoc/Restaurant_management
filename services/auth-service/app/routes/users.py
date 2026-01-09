@@ -15,17 +15,42 @@ from shared.models.enums import UserRole
 router = APIRouter(tags=["users"])
 
 
-@router.get("", response_model=List[UserResponse])
+@router.get("/users")
 async def list_users(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_master_admin)
 ):
     """List all users (master admin only)"""
-    result = await db.execute(
-        select(User).order_by(User.created_at.desc())
-    )
-    users = result.scalars().all()
-    return users
+    try:
+        result = await db.execute(
+            select(User).order_by(User.created_at.desc())
+        )
+        users = result.scalars().all()
+        # Debug: Print user data
+        print(f"DEBUG list_users: Retrieved {len(users)} users")
+        for user in users:
+            print(f"DEBUG: User {user.username}, role={user.role}, role_type={type(user.role)}")
+
+        # Try to manually serialize
+        response_list = []
+        for user in users:
+            try:
+                user_response = UserResponse.model_validate(user)
+                response_list.append(user_response)
+                print(f"DEBUG: Serialized {user.username} successfully")
+            except Exception as e:
+                print(f"ERROR serializing user {user.username}: {type(e).__name__}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                raise
+
+        print(f"DEBUG list_users: Returning {len(response_list)} users")
+        return response_list
+    except Exception as e:
+        print(f"ERROR in list_users: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 
 @router.get("/{user_id}", response_model=UserResponse)

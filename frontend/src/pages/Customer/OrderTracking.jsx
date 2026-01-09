@@ -247,17 +247,19 @@ export default function OrderTracking() {
             <div className="space-y-3">
               {order.items && order.items.length > 0 ? (
                 order.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{item.menu_item_name || item.name}</p>
-                      <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                  <div key={idx} className="flex justify-between items-start py-2 border-b last:border-b-0">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{item.item_name || item.menu_item_name || item.name}</p>
+                      <p className="text-sm text-gray-600">
+                        {restaurant?.currency_symbol || '$'}{parseFloat(item.item_price || item.price).toFixed(2)} × {item.quantity}
+                      </p>
                       {item.special_instructions && (
                         <p className="text-xs text-gray-500 italic mt-1">
                           Note: {item.special_instructions}
                         </p>
                       )}
                     </div>
-                    <p className="font-semibold">{restaurant?.currency_symbol || '$'}{(parseFloat(item.price) * item.quantity).toFixed(2)}</p>
+                    <p className="font-semibold text-gray-900 ml-4">{restaurant?.currency_symbol || '$'}{(parseFloat(item.item_price || item.price) * item.quantity).toFixed(2)}</p>
                   </div>
                 ))
               ) : (
@@ -420,7 +422,15 @@ export default function OrderTracking() {
             )}
 
             <button
-              onClick={() => navigate(`/menu?restaurant=${restaurant?.slug}`)}
+              onClick={() => {
+                if (order.table_id && order.restaurant_id) {
+                  navigate(`/table/${order.restaurant_id}/${order.table_id}`);
+                } else if (restaurant?.slug) {
+                  navigate(`/customer/menu?restaurant=${restaurant.slug}`);
+                } else {
+                  navigate('/customer-login');
+                }
+              }}
               className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md"
             >
               🍽️ Order Again

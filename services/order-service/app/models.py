@@ -67,6 +67,7 @@ class OrderItem(Base):
     menu_item_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     item_name = Column(String(255), nullable=False)  # Snapshot of name
     item_price = Column(Float, nullable=False)  # Snapshot of price
+    item_image_url = Column(String(500), nullable=True)  # Snapshot of image URL
 
     # Order details
     quantity = Column(Integer, nullable=False, default=1)

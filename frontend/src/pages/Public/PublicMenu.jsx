@@ -223,41 +223,61 @@ export default function PublicMenu() {
 
             <div className="grid gap-4">
               {items.map((item) => (
-                <div key={item.id} className="bg-white rounded-xl p-4 shadow hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
-                      {item.description && (
-                        <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                      )}
-
-                      <div className="flex gap-2 mt-2 flex-wrap">
-                        {item.is_vegetarian && (
-                          <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
-                            Vegetarian
-                          </span>
-                        )}
-                        {item.is_vegan && (
-                          <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
-                            Vegan
-                          </span>
-                        )}
-                        {item.is_gluten_free && (
-                          <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
-                            Gluten Free
-                          </span>
-                        )}
+                <div key={item.id} className="bg-white rounded-xl overflow-hidden shadow hover:shadow-md transition-shadow">
+                  <div className="flex gap-4">
+                    {/* Menu Item Image */}
+                    {item.image_url ? (
+                      <div className="w-24 h-24 flex-shrink-0">
+                        <img
+                          src={item.image_url}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
                       </div>
-                    </div>
+                    ) : (
+                      <div className="w-24 h-24 flex-shrink-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                        <span className="text-3xl">🍽️</span>
+                      </div>
+                    )}
 
-                    <div className="text-right">
-                      <p className="text-xl font-bold text-gray-900">${item.price.toFixed(2)}</p>
-                      <button
-                        onClick={() => addToCart(item)}
-                        className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-1 text-sm font-semibold"
-                      >
-                        <FiPlus /> Add
-                      </button>
+                    <div className="flex-1 p-4 flex justify-between items-start gap-4">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
+                        {item.description && (
+                          <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                        )}
+
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          {item.is_vegetarian && (
+                            <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                              Vegetarian
+                            </span>
+                          )}
+                          {item.is_vegan && (
+                            <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                              Vegan
+                            </span>
+                          )}
+                          {item.is_gluten_free && (
+                            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                              Gluten Free
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-gray-900">${item.price.toFixed(2)}</p>
+                        <button
+                          onClick={() => addToCart(item)}
+                          className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-1 text-sm font-semibold"
+                        >
+                          <FiPlus /> Add
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

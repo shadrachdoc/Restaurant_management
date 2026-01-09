@@ -16,6 +16,10 @@ spec:
       labels:
         app: restaurant-service
         tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8003"
+        prometheus.io/path: "/metrics"
     spec:
       affinity:
         nodeAffinity:
@@ -28,7 +32,7 @@ spec:
                 - restaurant-cluster-worker
       containers:
       - name: restaurant-service
-        image: shadrach85/restaurant-restaurant-service:all-formats
+        image: shadrach85/restaurant-service:030708d
         imagePullPolicy: Always
         ports:
         - containerPort: 8003
@@ -90,7 +94,7 @@ spec:
         resources:
           requests:
             memory: "256Mi"
-            cpu: "200m"
+            cpu: "100m"
           limits:
             memory: "512Mi"
             cpu: "500m"

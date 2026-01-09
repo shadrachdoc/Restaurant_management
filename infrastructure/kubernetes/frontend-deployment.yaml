@@ -28,8 +28,8 @@ spec:
                 - restaurant-cluster-worker2
       containers:
       - name: frontend
-        image: shadrach85/restaurant-frontend:a17281e
-        imagePullPolicy: Always
+        image: shadrach85/restaurant-frontend:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
           name: http
@@ -39,7 +39,7 @@ spec:
         resources:
           requests:
             memory: "256Mi"
-            cpu: "200m"
+            cpu: "100m"
           limits:
             memory: "512Mi"
             cpu: "500m"

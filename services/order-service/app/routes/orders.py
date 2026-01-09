@@ -138,6 +138,7 @@ async def create_order(
 
         item_name = menu_item.get("name", "Unknown Item")
         item_price = float(menu_item.get("price", 0.0))
+        item_image_url = menu_item.get("image_url")
         item_subtotal = item_price * item.quantity
         subtotal += item_subtotal
 
@@ -145,6 +146,7 @@ async def create_order(
             "menu_item_id": item.menu_item_id,
             "item_name": item_name,
             "item_price": item_price,
+            "item_image_url": item_image_url,
             "quantity": item.quantity,
             "special_instructions": item.special_requests
         })

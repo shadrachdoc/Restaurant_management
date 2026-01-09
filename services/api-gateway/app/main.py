@@ -129,13 +129,17 @@ async def gateway(
     # Remove host header to avoid conflicts
     headers.pop("host", None)
 
-    # Debug logging for authorization
-    print(f"DEBUG: Incoming Authorization header: {request.headers.get('authorization', 'NOT FOUND')}")
-    print(f"DEBUG: Credentials object: {credentials}")
+    # Debug: Check if authorization header exists
+    print(f"DEBUG: Original headers has 'authorization': {'authorization' in headers}")
+    print(f"DEBUG: credentials is None: {credentials is None}")
+    if credentials:
+        print(f"DEBUG: Setting Authorization header from credentials")
 
-    # Authorization header is already in the headers dict from request.headers
-    # No need to add it again - it's already there!
-    print(f"DEBUG: Authorization header in forwarded request: {headers.get('authorization', 'NOT FOUND')}")
+    # Add authorization header if credentials provided
+    if credentials:
+        headers["authorization"] = f"Bearer {credentials.credentials}"
+
+    print(f"DEBUG: Final headers has 'authorization': {'authorization' in headers}")
 
     # Get request body
     body = await request.body()

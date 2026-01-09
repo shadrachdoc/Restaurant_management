@@ -3,6 +3,7 @@
  * Customer preference tracking and personalized recommendations
  */
 import React, { useState } from 'react';
+import DashboardLayout from '../../components/layout/DashboardLayout';
 import { PopularItemsChart } from '../../components/charts';
 
 const CustomerInsights = () => {
@@ -70,6 +71,7 @@ const CustomerInsights = () => {
   };
 
   return (
+    <DashboardLayout>
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
       <div className="mb-6">
@@ -304,6 +306,7 @@ const CustomerInsights = () => {
         </div>
       )}
     </div>
+    </DashboardLayout>
   );
 };
 

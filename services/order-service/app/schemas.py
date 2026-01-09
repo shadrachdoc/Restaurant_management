@@ -24,6 +24,7 @@ class OrderItemResponse(BaseModel):
     menu_item_id: UUID
     item_name: str
     item_price: float
+    item_image_url: Optional[str] = None
     quantity: int
     special_instructions: Optional[str]
     created_at: datetime
