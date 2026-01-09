@@ -52,8 +52,8 @@ authService:
   replicaCount: 1
   image:
     repository: shadrach85/auth-service
-    tag: 739884b
-    pullPolicy: Always
+    tag: a8917f7
+    pullPolicy: IfNotPresent
   service:
     type: ClusterIP
     port: 8001
