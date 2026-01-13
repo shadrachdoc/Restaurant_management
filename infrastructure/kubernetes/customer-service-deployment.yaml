@@ -16,6 +16,10 @@ spec:
       labels:
         app: customer-service
         tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8007"
+        prometheus.io/path: "/metrics"
     spec:
       affinity:
         nodeAffinity:
@@ -28,8 +32,8 @@ spec:
                 - restaurant-cluster-worker
       containers:
       - name: customer-service
-        image: shadrach85/restaurant-customer-service:fda2e04
-        imagePullPolicy: IfNotPresent
+        image: shadrach85/customer-service:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8007
           name: http

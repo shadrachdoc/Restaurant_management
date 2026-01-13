@@ -52,7 +52,7 @@ authService:
   replicaCount: 1
   image:
     repository: shadrach85/auth-service
-    tag: 739884b
+    tag: a8917f7
     pullPolicy: Always
   service:
     type: ClusterIP
@@ -78,7 +78,7 @@ restaurantService:
   replicaCount: 1
   image:
     repository: shadrach85/restaurant-service
-    tag: 030708d
+    tag: b08c38b
     pullPolicy: Always
   service:
     type: ClusterIP
@@ -104,7 +104,7 @@ orderService:
   replicaCount: 1
   image:
     repository: shadrach85/order-service
-    tag: 739884b
+    tag: a6cba70
     pullPolicy: Always
   service:
     type: ClusterIP
@@ -132,7 +132,7 @@ customerService:
   name: customer-service
   replicaCount: 1
   image:
-    repository: restaurant_management_customer-service
+    repository: shadrach85/customer-service
     tag: 739884b
     pullPolicy: Always
   service:
@@ -159,7 +159,7 @@ frontend:
   replicaCount: 1
   image:
     repository: shadrach85/restaurant-frontend
-    tag: 030708d
+    tag: fcd59e2
     pullPolicy: Always
   service:
     type: ClusterIP

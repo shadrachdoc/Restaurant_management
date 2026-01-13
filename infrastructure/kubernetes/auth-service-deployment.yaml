@@ -16,10 +16,14 @@ spec:
       labels:
         app: auth-service
         tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8001"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: auth-service
-        image: shadrach85/auth-service:a17281e
+        image: shadrach85/auth-service:cd108b8
         imagePullPolicy: Always
         ports:
         - containerPort: 8001
@@ -108,7 +112,7 @@ spec:
         resources:
           requests:
             memory: "256Mi"
-            cpu: "200m"
+            cpu: "100m"
           limits:
             memory: "512Mi"
             cpu: "500m"

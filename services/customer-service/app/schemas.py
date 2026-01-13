@@ -13,8 +13,8 @@ class CustomerRegister(BaseModel):
     email: EmailStr
     phone_number: str = Field(..., min_length=10, max_length=20)
     password: str = Field(..., min_length=8, max_length=100)
-    first_name: str = Field(..., min_length=1, max_length=100)
-    last_name: str = Field(..., min_length=1, max_length=100)
+    first_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    last_name: Optional[str] = Field(None, min_length=1, max_length=100)
     accepts_marketing: bool = False
 
 
@@ -30,8 +30,8 @@ class GuestCheckout(BaseModel):
     restaurant_slug: str
     email: EmailStr
     phone_number: str
-    first_name: str
-    last_name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     delivery_address: Optional[str] = None
 
 

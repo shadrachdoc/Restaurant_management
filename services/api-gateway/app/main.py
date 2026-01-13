@@ -19,6 +19,7 @@ RESTAURANT_SERVICE_URL = os.getenv("RESTAURANT_SERVICE_URL", "http://restaurant-
 ORDER_SERVICE_URL = os.getenv("ORDER_SERVICE_URL", "http://order-service:8004")
 POS_SERVICE_URL = os.getenv("POS_SERVICE_URL", "http://pos-service:8005")  # Future POS service
 CUSTOMER_SERVICE_URL = os.getenv("CUSTOMER_SERVICE_URL", "http://customer-service:8007")
+INTEGRATION_SERVICE_URL = os.getenv("INTEGRATION_SERVICE_URL", "http://integration-service:8015")
 
 # Rate limiting configuration
 RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))
@@ -94,7 +95,11 @@ async def gateway(
     print(f"DEBUG: Received path: '{path}', method: {request.method}")
 
     # Determine target service based on path
-    if path.startswith("uploads/"):
+    if path.startswith("api/v1/webhooks/") or path.startswith("api/v1/integrations/"):
+        # Route webhooks and integration callbacks to integration service
+        target_url = f"{INTEGRATION_SERVICE_URL}/{path}"
+        print(f"DEBUG: Routing to INTEGRATION_SERVICE: {target_url}")
+    elif path.startswith("uploads/"):
         # Route uploaded files to restaurant service
         target_url = f"{RESTAURANT_SERVICE_URL}/{path}"
         print(f"DEBUG: Routing uploads to RESTAURANT_SERVICE: {target_url}")
@@ -129,13 +134,20 @@ async def gateway(
     # Remove host header to avoid conflicts
     headers.pop("host", None)
 
-    # Debug logging for authorization
-    print(f"DEBUG: Incoming Authorization header: {request.headers.get('authorization', 'NOT FOUND')}")
-    print(f"DEBUG: Credentials object: {credentials}")
+    # Remove authorization header if present to avoid duplication
+    # We'll use the one from credentials if provided
+    headers.pop("authorization", None)
 
-    # Authorization header is already in the headers dict from request.headers
-    # No need to add it again - it's already there!
-    print(f"DEBUG: Authorization header in forwarded request: {headers.get('authorization', 'NOT FOUND')}")
+    # Debug: Check if authorization header exists
+    print(f"DEBUG: credentials is None: {credentials is None}")
+    if credentials:
+        print(f"DEBUG: Setting Authorization header from credentials")
+
+    # Add authorization header if credentials provided
+    if credentials:
+        headers["authorization"] = f"Bearer {credentials.credentials}"
+
+    print(f"DEBUG: Final headers has 'authorization': {'authorization' in headers}")
 
     # Get request body
     body = await request.body()

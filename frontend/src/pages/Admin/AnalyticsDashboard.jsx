@@ -3,6 +3,7 @@
  * Comprehensive sales analytics dashboard with 8 sections
  */
 import React, { useState, useEffect } from 'react';
+import DashboardLayout from '../../components/layout/DashboardLayout';
 import DateRangePicker from '../../components/DateRangePicker';
 import {
   RevenueChart,
@@ -209,16 +210,19 @@ const AnalyticsDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading analytics...</p>
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading analytics...</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
+    <DashboardLayout>
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
       <div className="mb-6">
@@ -518,6 +522,7 @@ const AnalyticsDashboard = () => {
         </div>
       )}
     </div>
+    </DashboardLayout>
   );
 };
 

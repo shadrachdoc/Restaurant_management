@@ -2,13 +2,16 @@
 Order Service - Main application
 Handles online orders, table sessions, and assistance requests
 """
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import asyncio
 from shared.config.settings import settings
 from shared.utils.logger import setup_logger
 from .database import init_db, close_db
 from .routes import orders, sessions, assistance, analytics
+from .websocket import manager
+from .rabbitmq_consumer import start_consumer
 
 # Setup logger
 logger = setup_logger("order-service", settings.log_level, settings.log_format)
@@ -21,7 +24,13 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Order Service...")
     await init_db()
     logger.info("Database initialized")
+
+    # Start RabbitMQ consumer in background
+    asyncio.create_task(start_consumer())
+    logger.info("RabbitMQ consumer started")
+
     yield
+
     # Shutdown
     logger.info("Shutting down Order Service...")
     await close_db()
@@ -90,6 +99,42 @@ async def health_check():
         "status": "healthy",
         "service": "order-service"
     }
+
+
+@app.websocket("/ws/orders/{restaurant_id}")
+async def websocket_endpoint(websocket: WebSocket, restaurant_id: str):
+    """
+    WebSocket endpoint for real-time order notifications
+    Clients connect to receive instant notifications when new orders arrive
+    """
+    await manager.connect(websocket, restaurant_id)
+
+    try:
+        # Send welcome message
+        await manager.send_personal_message(
+            {
+                "type": "connection",
+                "message": f"Connected to order notifications for restaurant {restaurant_id}",
+                "restaurant_id": restaurant_id
+            },
+            websocket
+        )
+
+        # Keep connection alive and handle incoming messages
+        while True:
+            data = await websocket.receive_text()
+            logger.debug(f"Received WebSocket message: {data}")
+
+            # Echo heartbeat/ping messages
+            if data == "ping":
+                await manager.send_personal_message({"type": "pong"}, websocket)
+
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, restaurant_id)
+        logger.info(f"WebSocket client disconnected from restaurant {restaurant_id}")
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        manager.disconnect(websocket, restaurant_id)
 
 
 if __name__ == "__main__":

@@ -2,14 +2,54 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: api-gateway
-  namespace: restaurant-management
+  namespace: restaurant-system
 spec:
   hosts:
     - "restaurant.corpv3.com"
   gateways:
     - restaurant-gateway
   http:
+    # Webhooks - route directly to integration service (bypass API Gateway)
+    # MUST come before /api/v1/ route due to specificity
+    - match:
+        - uri:
+            prefix: "/api/v1/webhooks/"
+      route:
+        - destination:
+            host: integration-service
+            port:
+              number: 8015
+          weight: 100
+      timeout: 30s
+
+    # Integration service routes (OAuth callbacks, etc.)
+    # MUST come before /api/v1/ route due to specificity
+    - match:
+        - uri:
+            prefix: "/api/v1/integrations/"
+      route:
+        - destination:
+            host: integration-service
+            port:
+              number: 8015
+          weight: 100
+      timeout: 30s
+
+    # Health check endpoints
+    - match:
+        - uri:
+            exact: "/health"
+        - uri:
+            exact: "/api/v1/health"
+      route:
+        - destination:
+            host: api-gateway
+            port:
+              number: 8000
+      timeout: 5s
+
     # API routes - direct to API Gateway
+    # MUST come after more specific routes
     - match:
         - uri:
             prefix: "/api/v1/"
@@ -32,18 +72,17 @@ spec:
           add:
             x-served-by: "istio-gateway"
 
-    # Health check endpoints
+    # Static file uploads - route to API Gateway which forwards to restaurant-service
     - match:
         - uri:
-            exact: "/health"
-        - uri:
-            exact: "/api/v1/health"
+            prefix: "/uploads/"
       route:
         - destination:
             host: api-gateway
             port:
               number: 8000
-      timeout: 5s
+          weight: 100
+      timeout: 10s
 
     # Frontend routes - everything else goes to React app
     - match:

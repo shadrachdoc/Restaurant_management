@@ -90,4 +90,21 @@ spec:
   resources:
     requests:
       storage: 5Gi
- 
+
+---
+# Restaurant Service Uploads Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: restaurant-uploads-pvc
+  namespace: restaurant-system
+  labels:
+    app: restaurant-service
+spec:
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+

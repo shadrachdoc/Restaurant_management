@@ -2,8 +2,8 @@
 Pydantic schemas for Auth Service
 """
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, EmailStr, Field, UUID4
+from typing import Optional, Union
+from pydantic import BaseModel, EmailStr, Field, UUID4, field_validator
 from shared.models.enums import UserRole
 
 
@@ -22,6 +22,25 @@ class UserCreate(UserBase):
     role: UserRole
     restaurant_id: Optional[UUID4] = None
 
+    @field_validator('role', mode='before')
+    @classmethod
+    def normalize_role(cls, v: Union[str, UserRole]) -> UserRole:
+        """Convert role string to proper enum value (case-insensitive)"""
+        if isinstance(v, UserRole):
+            return v
+        if isinstance(v, str):
+            # Convert to lowercase with underscores
+            normalized = v.lower().replace('-', '_')
+            try:
+                return UserRole(normalized)
+            except ValueError:
+                # If direct match fails, try to match by name
+                for role in UserRole:
+                    if role.name.lower() == v.upper().replace('-', '_'):
+                        return role
+                raise ValueError(f"Invalid role: {v}")
+        raise ValueError(f"Role must be a string or UserRole, got {type(v)}")
+
 
 class StaffCreate(UserBase):
     """Schema for staff creation (chef/customer) by restaurant admin"""
@@ -38,6 +57,25 @@ class UserUpdate(BaseModel):
     role: Optional[UserRole] = None
     restaurant_id: Optional[UUID4] = None
     is_active: Optional[bool] = None
+
+    @field_validator('role', mode='before')
+    @classmethod
+    def normalize_role(cls, v: Union[str, UserRole, None]) -> Optional[UserRole]:
+        """Convert role string to proper enum value (case-insensitive)"""
+        if v is None or isinstance(v, UserRole):
+            return v
+        if isinstance(v, str):
+            # Convert to lowercase with underscores
+            normalized = v.lower().replace('-', '_')
+            try:
+                return UserRole(normalized)
+            except ValueError:
+                # If direct match fails, try to match by name
+                for role in UserRole:
+                    if role.name.lower() == v.upper().replace('-', '_'):
+                        return role
+                raise ValueError(f"Invalid role: {v}")
+        raise ValueError(f"Role must be a string or UserRole, got {type(v)}")
 
 
 class StaffUpdate(BaseModel):
@@ -59,8 +97,7 @@ class UserResponse(UserBase):
     created_at: datetime
     last_login: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True, "use_enum_values": False}
 
 
 # Authentication Schemas

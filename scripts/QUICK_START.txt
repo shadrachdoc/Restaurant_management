@@ -1,0 +1,73 @@
+=============================================================================
+DAILY ORDER GENERATOR - QUICK START
+=============================================================================
+
+📍 LOCATION: /home/shadrach/Restaurant_management/scripts/
+
+🎯 MAIN SCRIPT: generate_daily_orders_sql.py
+
+=============================================================================
+USAGE
+=============================================================================
+
+Run manually:
+    cd /home/shadrach/Restaurant_management/scripts
+    python3 generate_daily_orders_sql.py
+
+Schedule daily (cron):
+    crontab -e
+    # Add: 0 0 * * * python3 generate_daily_orders_sql.py
+
+=============================================================================
+WHAT IT DOES
+=============================================================================
+
+✅ Generates 250 orders for TODAY
+✅ Realistic time distribution (breakfast, lunch, dinner peaks)
+✅ Multiple order statuses (PENDING, CONFIRMED, PREPARING, READY, SERVED, COMPLETED)
+✅ Random order types (TABLE 50%, ONLINE 50%)
+✅ Includes all 9 menu items
+✅ Proper billing: subtotal + 10% tax = total
+✅ Random customer names and phones
+
+=============================================================================
+VERIFY RESULTS
+=============================================================================
+
+Check database:
+    kubectl exec -i postgres-0 -n restaurant-system -- psql -U restaurant_admin -d restaurant_db -c "SELECT COUNT(*) as orders, ROUND(CAST(SUM(total) as numeric), 2) as revenue FROM orders WHERE DATE(created_at) = CURRENT_DATE;"
+
+Check popular items:
+    kubectl exec -i postgres-0 -n restaurant-system -- psql -U restaurant_admin -d restaurant_db -c "SELECT mi.name, COUNT(oi.id) as orders FROM order_items oi JOIN menu_items mi ON oi.menu_item_id = mi.id JOIN orders o ON oi.order_id = o.id WHERE DATE(o.created_at) = CURRENT_DATE GROUP BY mi.name ORDER BY orders DESC LIMIT 5;"
+
+View analytics:
+    https://restaurant.corpv3.com/analytics
+
+Check predictions API:
+    curl -s "https://restaurant.corpv3.com/api/v1/restaurants/6956017d-3aea-4ae2-9709-0ca0ac0a1a09/analytics/predictions/demand" | jq '.predictions | length'
+
+=============================================================================
+TROUBLESHOOTING
+=============================================================================
+
+If script fails:
+    1. Check postgres pod is running:
+       kubectl get pods -n restaurant-system | grep postgres
+
+    2. Check database connection:
+       kubectl exec -i postgres-0 -n restaurant-system -- psql -U restaurant_admin -d restaurant_db -c "SELECT 1;"
+
+    3. Verify menu items exist:
+       kubectl exec -i postgres-0 -n restaurant-system -- psql -U restaurant_admin -d restaurant_db -c "SELECT COUNT(*) FROM menu_items WHERE restaurant_id = '6956017d-3aea-4ae2-9709-0ca0ac0a1a09';"
+
+=============================================================================
+NOTES
+=============================================================================
+
+⚠️ Each run creates NEW orders (not idempotent)
+⚠️ Orders are for TODAY only
+✅ Safe to run multiple times (creates more data)
+✅ No API rate limits (direct SQL)
+✅ Fast execution (~30 seconds for 250 orders)
+
+=============================================================================
