@@ -58,32 +58,32 @@ ML_TRAINING_SEMAPHORE = asyncio.Semaphore(1)  # Laptop: only 1 concurrent traini
 PERIOD_CONFIG = {
     "1_week": {
         "days": 7,
-        "min_history_days": 60,
+        "min_history_days": 14,  # Reduced from 60 to 14 days for testing
         "cache_ttl": 86400  # 24 hours
     },
     "2_weeks": {
         "days": 14,
-        "min_history_days": 90,
+        "min_history_days": 21,  # Reduced from 90 to 21 days
         "cache_ttl": 86400
     },
     "1_month": {
         "days": 30,
-        "min_history_days": 120,
+        "min_history_days": 30,  # Reduced from 120 to 30 days
         "cache_ttl": 86400
     },
     "3_months": {
         "days": 90,
-        "min_history_days": 180,
+        "min_history_days": 60,  # Reduced from 180 to 60 days
         "cache_ttl": 86400 * 2  # 48 hours
     },
     "6_months": {
         "days": 180,
-        "min_history_days": 365,
+        "min_history_days": 90,  # Reduced from 365 to 90 days
         "cache_ttl": 86400 * 3  # 72 hours
     },
     "12_months": {
         "days": 365,
-        "min_history_days": 730,
+        "min_history_days": 180,  # Reduced from 730 to 180 days
         "cache_ttl": 86400 * 7  # 1 week
     }
 }
