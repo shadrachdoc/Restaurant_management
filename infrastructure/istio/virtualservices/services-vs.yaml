@@ -107,3 +107,24 @@ spec:
       retries:
         attempts: 2
         perTryTimeout: 10s
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: integration-service
+  namespace: restaurant-system
+spec:
+  hosts:
+    - integration-service
+  http:
+    - route:
+        - destination:
+            host: integration-service
+            port:
+              number: 8015
+            subset: stable
+          weight: 100
+      timeout: 30s  # Longer timeout for webhook processing
+      retries:
+        attempts: 1  # Don't retry webhooks (they should be idempotent)
+        perTryTimeout: 30s
