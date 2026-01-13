@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: integration-service
-        image: shadrach85/integration-service:v1.3
+        image: shadrach85/integration-service:v1.4
         imagePullPolicy: Always
         ports:
         - containerPort: 8015
@@ -29,7 +29,7 @@ spec:
               name: restaurant-config
               key: DATABASE_URL
         - name: ORDER_SERVICE_URL
-          value: "http://order-service:8002"
+          value: "http://order-service:8004"
         - name: ENVIRONMENT
           value: "sandbox"
         - name: UBER_CLIENT_SECRET
