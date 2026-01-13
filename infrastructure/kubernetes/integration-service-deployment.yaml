@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: integration-service
-        image: shadrach85/integration-service:v1.4
+        image: shadrach85/integration-service:v1.5
         imagePullPolicy: Always
         ports:
         - containerPort: 8015

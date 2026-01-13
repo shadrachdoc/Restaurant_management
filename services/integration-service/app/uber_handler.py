@@ -36,7 +36,7 @@ async def process_uber_order(payload: Dict[str, Any]) -> Dict[str, Any]:
         order_data = {
             "restaurant_id": RESTAURANT_ID,
             "table_id": None,  # Uber orders don't have table_id
-            "order_type": "UBER",
+            "order_type": "ONLINE",  # Use ONLINE type for Uber Eats orders
             "customer_name": uber_order.get("eater", {}).get("first_name", "Uber Customer") + " " +
                            uber_order.get("eater", {}).get("last_name", ""),
             "customer_phone": uber_order.get("eater", {}).get("phone", ""),
