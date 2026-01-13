@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
       - name: integration-service
-        image: shadrach85/integration-service:v1.0
-        imagePullPolicy: IfNotPresent
+        image: shadrach85/integration-service:v1.1
+        imagePullPolicy: Always
         ports:
         - containerPort: 8015
           name: http

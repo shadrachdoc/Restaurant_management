@@ -120,21 +120,32 @@ async def uber_eats_webhook(
         event_type = payload.get("event_type", "unknown")
         logger.info(f"Event type: {event_type}")
 
+        # Import handler functions
+        from .uber_handler import process_uber_order, handle_order_cancel, handle_status_update
+
         # Handle different event types
         if event_type == "orders.notification":
             # New order received
             logger.info("New Uber Eats order received")
-            # TODO: Process and create order in database
+            order = await process_uber_order(payload)
+            return {
+                "status": "success",
+                "message": "Order created successfully",
+                "order_number": order.get("order_number"),
+                "order_id": order.get("id")
+            }
 
         elif event_type == "orders.cancel":
             # Order cancelled
             logger.info("Uber Eats order cancelled")
-            # TODO: Update order status
+            result = await handle_order_cancel(payload)
+            return {"status": "success", "message": "Order cancelled", "data": result}
 
         elif event_type == "orders.status_update":
             # Status updated
             logger.info("Uber Eats order status updated")
-            # TODO: Sync status
+            result = await handle_status_update(payload)
+            return {"status": "success", "message": "Status updated", "data": result}
 
         return {"status": "success", "message": "Webhook processed"}
 
