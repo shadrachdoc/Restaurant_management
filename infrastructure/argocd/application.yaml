@@ -12,6 +12,8 @@ spec:
     repoURL: https://github.com/shadrachdoc/Restaurant_management.git
     targetRevision: developer  # Track developer branch for continuous deployment
     path: infrastructure/kubernetes
+    directory:
+      recurse: true  # Process all YAML files in directory
     
   destination:
     server: https://kubernetes.default.svc
