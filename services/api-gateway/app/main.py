@@ -129,8 +129,11 @@ async def gateway(
     # Remove host header to avoid conflicts
     headers.pop("host", None)
 
+    # Remove authorization header if present to avoid duplication
+    # We'll use the one from credentials if provided
+    headers.pop("authorization", None)
+
     # Debug: Check if authorization header exists
-    print(f"DEBUG: Original headers has 'authorization': {'authorization' in headers}")
     print(f"DEBUG: credentials is None: {credentials is None}")
     if credentials:
         print(f"DEBUG: Setting Authorization header from credentials")

@@ -90,7 +90,7 @@ spec:
               key: QR_CODE_BASE_URL
         volumeMounts:
         - name: uploads
-          mountPath: /uploads
+          mountPath: /app/uploads
         resources:
           requests:
             memory: "256Mi"
@@ -112,7 +112,8 @@ spec:
           periodSeconds: 5
       volumes:
       - name: uploads
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: restaurant-uploads-pvc
 ---
 apiVersion: v1
 kind: Service

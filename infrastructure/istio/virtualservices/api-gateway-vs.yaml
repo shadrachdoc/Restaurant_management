@@ -2,7 +2,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: api-gateway
-  namespace: restaurant-management
+  namespace: restaurant-system
 spec:
   hosts:
     - "restaurant.corpv3.com"
@@ -44,6 +44,18 @@ spec:
             port:
               number: 8000
       timeout: 5s
+
+    # Static file uploads - route to API Gateway which forwards to restaurant-service
+    - match:
+        - uri:
+            prefix: "/uploads/"
+      route:
+        - destination:
+            host: api-gateway
+            port:
+              number: 8000
+          weight: 100
+      timeout: 10s
 
     # Frontend routes - everything else goes to React app
     - match:
