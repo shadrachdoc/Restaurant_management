@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: shadrach85/restaurant-api-gateway:uploads-routing
+        image: shadrach85/api-gateway:uber-integration
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
