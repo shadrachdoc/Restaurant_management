@@ -133,7 +133,7 @@ async def publish_order_notification(order: Dict[str, Any]):
         import aio_pika
         import json
 
-        RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
+        RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq-service")
         RABBITMQ_USER = os.getenv("RABBITMQ_USER", "restaurant_user")
         RABBITMQ_PASSWORD = os.getenv("RABBITMQ_PASSWORD", "restaurant_pass_2024")
 
