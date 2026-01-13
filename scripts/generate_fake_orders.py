@@ -177,11 +177,12 @@ def generate_orders_for_day(conn, date, restaurant_id, menu_items, tables, base_
             item_id = str(uuid.uuid4())
             cursor.execute("""
                 INSERT INTO order_items (
-                    id, order_id, menu_item_id, item_name, item_price, quantity
-                ) VALUES (%s, %s, %s, %s, %s, %s)
+                    id, order_id, menu_item_id, item_name, item_price, quantity, created_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (
                 item_id, order_id, item_data['menu_item_id'],
-                item_data['name'], float(item_data['price']), item_data['quantity']
+                item_data['name'], float(item_data['price']), item_data['quantity'],
+                order_time
             ))
 
         orders_created += 1
@@ -204,9 +205,9 @@ def main():
     print(f"✓ Tables: {len(tables)}")
     print()
 
-    # Generate orders for past 30 days
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=30)
+    # Generate orders for past 90 days (to get before Dec 14)
+    end_date = datetime(2025, 12, 13, 23, 59, 59)  # Day before our existing data
+    start_date = end_date - timedelta(days=90)
 
     total_orders = 0
     current_date = start_date
