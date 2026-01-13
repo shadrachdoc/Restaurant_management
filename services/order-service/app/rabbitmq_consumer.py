@@ -20,8 +20,8 @@ class OrderNotificationConsumer:
         self.connection: Optional[aio_pika.Connection] = None
         self.channel: Optional[aio_pika.Channel] = None
         self.rabbitmq_host = os.getenv("RABBITMQ_HOST", "rabbitmq-service")
-        self.rabbitmq_user = os.getenv("RABBITMQ_USER", "restaurant_user")
-        self.rabbitmq_password = os.getenv("RABBITMQ_PASSWORD", "restaurant_pass_2024")
+        self.rabbitmq_user = os.getenv("RABBITMQ_USER", "guest")
+        self.rabbitmq_password = os.getenv("RABBITMQ_PASSWORD", "guest")
 
     async def connect(self):
         """Connect to RabbitMQ"""
