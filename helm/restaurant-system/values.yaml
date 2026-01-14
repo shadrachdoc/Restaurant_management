@@ -189,7 +189,7 @@ frontend:
   replicaCount: 1
   image:
     repository: shadrach85/restaurant-frontend
-    tag: v1.1-online-orders
+    tag: v1.2-uber-highlight
     pullPolicy: Always
   service:
     type: ClusterIP
