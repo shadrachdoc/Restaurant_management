@@ -89,7 +89,10 @@ export default authApi;
 export const authAPI = {
   login: (credentials) => authApi.post('/api/v1/auth/login', credentials),
   signup: (userData) => authApi.post('/api/v1/auth/signup', userData),
-  logout: () => authApi.post('/api/v1/auth/logout'),
+  logout: () => {
+    const refreshToken = localStorage.getItem('refresh_token');
+    return authApi.post('/api/v1/auth/logout', { refresh_token: refreshToken });
+  },
   refreshToken: (refreshToken) => authApi.post('/api/v1/auth/refresh', { refresh_token: refreshToken }),
   changePassword: (data) => authApi.post('/api/v1/auth/change-password', data),
   getCurrentUser: () => authApi.get('/api/v1/users/me'),
