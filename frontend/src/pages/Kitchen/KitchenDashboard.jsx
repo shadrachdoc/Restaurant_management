@@ -189,14 +189,25 @@ export default function KitchenDashboard() {
         {orders.map((order) => (
           <div
             key={order.id}
-            className={`${statusColors[order.status] || 'bg-gray-100 border-gray-300'} border-4 rounded-xl p-6 bg-white shadow-lg`}
+            className={`
+              ${statusColors[order.status] || 'bg-gray-100 border-gray-300'}
+              ${order.order_type === 'ONLINE' ? 'ring-4 ring-green-400 animate-pulse' : ''}
+              border-4 rounded-xl p-6 bg-white shadow-lg relative
+            `}
           >
+            {/* Uber Badge for Online Orders */}
+            {order.order_type === 'ONLINE' && (
+              <div className="absolute -top-3 -right-3 bg-green-500 text-white px-4 py-2 rounded-full font-bold shadow-lg animate-bounce">
+                🚗 UBER EATS
+              </div>
+            )}
+
             {/* Order Header */}
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-2xl font-bold text-gray-900">{order.order_number}</h3>
                 <p className="text-lg font-semibold text-gray-700">
-                  {order.table_id ? `Table ${order.table_id.substring(0, 8)}` : 'Takeout'}
+                  {order.order_type === 'ONLINE' ? '🍔 Online Delivery' : order.table_id ? `Table ${order.table_id.substring(0, 8)}` : 'Takeout'}
                 </p>
                 {order.customer_name && (
                   <p className="text-sm text-gray-600">{order.customer_name}</p>
@@ -226,6 +237,16 @@ export default function KitchenDashboard() {
                 </div>
               ))}
             </div>
+
+            {/* Delivery Address for Online Orders */}
+            {order.order_type === 'ONLINE' && order.delivery_address && (
+              <div className="mb-4 p-3 bg-green-50 border-2 border-green-300 rounded-lg">
+                <p className="text-xs font-bold text-green-700 mb-1">📍 DELIVERY ADDRESS</p>
+                <p className="text-sm font-semibold text-green-900">
+                  {order.delivery_address}
+                </p>
+              </div>
+            )}
 
             {/* Special Instructions */}
             {order.special_instructions && (
