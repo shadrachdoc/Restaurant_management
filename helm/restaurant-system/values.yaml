@@ -189,7 +189,7 @@ frontend:
   replicaCount: 1
   image:
     repository: shadrach85/restaurant-frontend
-    tag: fcd59e2
+    tag: v1.1-online-orders
     pullPolicy: Always
   service:
     type: ClusterIP

@@ -26,7 +26,7 @@ const OnlineOrdersPanel = ({ restaurantId }) => {
   // WebSocket connection for real-time updates
   useOrderNotifications(restaurantId, (notification) => {
     // New order notification
-    if (notification.event === 'order.created' && ['UBER', 'DELIVERY'].includes(notification.order_type)) {
+    if (notification.event === 'order.created' && notification.order_type === 'ONLINE') {
       setNewOrderCount(prev => prev + 1);
       fetchOnlineOrders(); // Refresh the list
     }
@@ -46,9 +46,9 @@ const OnlineOrdersPanel = ({ restaurantId }) => {
     try {
       const response = await orderAPI.list(restaurantId, { limit: 100 });
 
-      // Filter for online orders (Uber, Delivery, etc.)
+      // Filter for online orders (Uber Eats, delivery platforms)
       const online = response.data.filter(order =>
-        ['UBER', 'DELIVERY'].includes(order.order_type)
+        order.order_type === 'ONLINE'
       );
 
       // Sort by creation time (newest first)
@@ -76,15 +76,15 @@ const OnlineOrdersPanel = ({ restaurantId }) => {
   };
 
   const getOrderIcon = (orderType) => {
-    if (orderType === 'UBER') return <FaUber className="text-green-600" />;
-    if (orderType === 'DELIVERY') return <MdDeliveryDining className="text-blue-600" />;
-    return <FiPackage className="text-gray-600" />;
+    // For now, all ONLINE orders show Uber icon (can enhance later to detect platform from order details)
+    if (orderType === 'ONLINE') return <FaUber className="text-green-600" />;
+    return <MdDeliveryDining className="text-blue-600" />;
   };
 
   const getStatusBadge = (status) => {
     const badges = {
       pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
-      confirmed: 'bg-orange-100', text: 'text-orange-800', label: 'Confirmed' },
+      confirmed: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Confirmed' },
       preparing: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Preparing' },
       ready: { bg: 'bg-green-100', text: 'text-green-800', label: 'Ready' },
       completed: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Completed' }

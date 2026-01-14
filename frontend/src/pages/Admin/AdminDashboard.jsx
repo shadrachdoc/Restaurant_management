@@ -5,6 +5,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import { restaurantAPI, feedbackAPI, tableAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
+import OnlineOrdersPanel from '../../components/Admin/OnlineOrdersPanel';
 
 export default function AdminDashboard() {
   const { user } = useAuthStore();
@@ -133,6 +134,13 @@ export default function AdminDashboard() {
                 );
               })}
             </div>
+
+            {/* Online Orders Panel */}
+            {user?.restaurant_id && (
+              <div className="mb-8">
+                <OnlineOrdersPanel restaurantId={user.restaurant_id} />
+              </div>
+            )}
 
             {/* Table Status Overview */}
             {tables.length > 0 && (
