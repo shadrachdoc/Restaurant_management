@@ -14,20 +14,21 @@
 #   accessModes:
 #     - ReadWriteOnce
 
----
+#---
 # PostgreSQL Persistent Volume Claim
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: postgres-pvc
-  namespace: restaurant-system
-spec:
-  storageClassName: longhorn
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
+# Note: StatefulSet creates its own PVC (postgres-storage-postgres-0) with standard storage class
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: postgres-pvc
+#   namespace: restaurant-system
+# spec:
+#   storageClassName: longhorn
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 10Gi
 
 # ---
 # # Redis Persistent Volume
@@ -45,20 +46,21 @@ spec:
 #   accessModes:
 #     - ReadWriteOnce
 
----
+#---
 # Redis Persistent Volume Claim
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: redis-pvc
-  namespace: restaurant-system
-spec:
-  storageClassName: longhorn
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
+# Note: StatefulSet creates its own PVC (redis-storage-redis-0) with standard storage class
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: redis-pvc
+#   namespace: restaurant-system
+# spec:
+#   storageClassName: longhorn
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 5Gi
 
 # ---
 # # RabbitMQ Persistent Volume
@@ -76,20 +78,21 @@ spec:
 #   accessModes:
 #     - ReadWriteOnce
 
----
+#---
 # RabbitMQ Persistent Volume Claim
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: rabbitmq-pvc
-  namespace: restaurant-system
-spec:
-  storageClassName: longhorn
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
+# Note: StatefulSet creates its own PVC (rabbitmq-storage-rabbitmq-0) with standard storage class
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: rabbitmq-pvc
+#   namespace: restaurant-system
+# spec:
+#   storageClassName: longhorn
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 5Gi
 
 ---
 # Restaurant Service Uploads Persistent Volume Claim
